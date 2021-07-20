@@ -1,26 +1,29 @@
-//NODE-OBSosc
-//by Joe Shea
+// A bridge between OBS websocket and OSC
 
-//Get Modules and Setup
+// Install libs: npm install
+// Run: npm start
+
+const chalk = require('chalk');
 const OBSWebSocket = require('obs-websocket-js');
 const { Client, Server } = require('node-osc');
 const obs = new OBSWebSocket();
 
-//INPUT YOUR STUFF HERE:
-//OBS Config
-const obsIp = "127.0.0.1"
+// OBS Config
+const obsIp = "127.0.0.1";
 const obsPort = 4444;
-const obsPassword = "secret"
-//OSC Server (IN) Config
-const oscServerIp = "127.0.0.1";
+const obsPassword = "secret";
+// OSC Server (IN) Config
+const oscServerIp = "0.0.0.0";  // Listen IP, set to 0.0.0.0 to listen on all interfaces
 const oscPortIn = 3333;
-//OSC Client (OUT) Config
-const oscClientIp = "127.0.0.1";
+// OSC Client (OUT) Config - i.e. sending OSC to QLab
+const oscClientIp = "127.0.0.1";  // QLab IP
 const oscPortOut = 53000;
-const oscOutPrefix = "/cue/"
-const oscOutSuffix = "/start"
-//Enable OBS -> App Control
-const enableObs2App = false
+// Enable OBS -> OSC Control
+const enableObs2Osc = false;
+
+// Cache last transition so we know how to trigger it (cut works differently to all the others)
+// See https://github.com/Palakis/obs-websocket/blob/4.x-current/docs/generated/protocol.md#transitionbegin
+var lastTransition = null;
 
 
 //Connect to OBS
@@ -29,27 +32,27 @@ obs.connect({
         password: obsPassword
     })
     .then(() => {
-        console.log(`\nConnected & authenticated to OBS Websockets...\nIP: ${obsIp}\nPort: ` + obsPort);
-        return obs.send('GetSceneList');                                    //Send a Get Scene List Promise
+        console.log(`[+] Connected to OBS Websocket OK (${obsIp}:${obsPort})`);
+        return obs.send("GetSceneList");
     })
     .then(data => {
-        console.log(`\n${data.scenes.length} Available Scenes.` + "\n");    //Log Total Scenes
-        console.log(data.scenes.forEach((thing, index) => {
-            console.log((index + 1) + " - " + thing.name);                  //Log List of Available Scenes with OSC Index
-        }));
-
-        console.log('-- Use "/scene [index]" For OSC Control --\n\n');      //Log OSC Scene Syntax
+        // Pull current screen transition
+        obs.send("GetCurrentTransition").then(data => {
+            lastTransition = data.name;
+            console.log(`[+] Cached current transition: "${data.name}"`);
+        });
+        // Log Total Scenes
+        console.log(`\n${data.scenes.length} Available Scenes:`);
+        data.scenes.forEach((thing, index) => {
+            console.log("    " + (index + 1) + " - " + thing.name);
+        });
+        // Log OSC Scene Syntax
+        console.log('\n-- Use "/scene [index]" For OSC Control --\n');
     })
     .catch(err => {
-        console.log(err);                                                   //Log Catch Errors
-        console.log("-!- Make Sure OBS is Running and Websocket IP/Port/Password are Correct -!-");
+        console.log(err);
+        console.log(chalk.red("[!] Make Sure OBS is Running and Websocket IP/port/password are correct!"));
     });
-
-//Listen and Log When New Scene is Activated
-obs.on('SwitchScenes', data => {
-    console.log(`New Active Scene: ${data.sceneName}`);
-});
-
 
 
 // Handler to Avoid Uncaught Exceptions.
@@ -63,15 +66,18 @@ var server = new Server(oscPortIn, oscServerIp);
 
 //OSC Server (IN)
 server.on('listening', () => {
-  console.log("\n\n" + 'OSC Server is listening on...\n IP: ' + oscServerIp + '\n Port: ' + oscPortIn);
-  console.log('\nOSC Server is sending back on...\n IP: ' + oscClientIp + '\n Port: ' + oscPortOut);
+  console.log(`[+] OSC Server is listening on ${oscServerIp}:${oscPortIn}`);
+  console.log(`[+] OSC Server is sending back on ${oscClientIp}:${oscPortOut}`);
 })
 
 //OSC -> OBS
 server.on('message', (msg) => {
+    /*
+     * SCENE (transition to immediately)
+     */
+
     //Trigger Scene by Index Number
-  if (msg[0] === "/scene" && typeof msg[1] === 'number'){ 
-      console.log("number thing works")                                     //When OSC Recieves a /scene do...
+  if (msg[0] === "/scene" && typeof msg[1] === 'number') {
       var oscMessage = msg[1] - 1;                                          //Convert Index Number to Start at 1
       var oscMessage = Math.floor(oscMessage);                              //Converts Any Float Argument to Lowest Integer
     return obs.send('GetSceneList').then(data => {                          //Request Scene List Array
@@ -87,13 +93,13 @@ server.on('message', (msg) => {
     //Trigger Scene if Argument is a String and Contains a Space
     else if (msg[0] === "/scene" && msg.length > 2){                      //When OSC Recieves a /scene do...                                       
         var firstIndex = msg.shift();                                       //Removes First Index from 'msg' and Stores it to Another Variable
-        oscMultiArg = msg.join(' ')                                         //Converts 'msg' to a String with spaces
+        let oscMultiArg = msg.join(' ');
       return obs.send('GetSceneList').then(data => {                        //Request Scene List Array
           console.log(`OSC IN: ${firstIndex} ${oscMultiArg}`)
           obs.send("SetCurrentScene", {
               'scene-name': oscMultiArg                                     //Set to Scene from OSC
               }).catch(() => {
-                console.log(`Error: There is no Scene "${oscMultiArg}" in OBS. Double check case sensitivity.`);
+                console.log(chalk.red(`[!] There is no scene "${oscMultiArg}" in OBS. Double check case sensitivity.`));
               })
           }).catch((err) => {
               console.log(err)                                                            //Catch Error
@@ -108,7 +114,7 @@ server.on('message', (msg) => {
           obs.send("SetCurrentScene", {
               'scene-name': oscMessage                                       //Set to Scene from OSC
               }).catch(() => {
-                console.log(`Error: There is no Scene "${msg[1]}" in OBS. Double check case sensitivity.`);
+                console.log(chalk.red(`[!] There is no scene "${msg[1]}" in OBS. Double check case sensitivity.`));
               })
           }).catch((err) => {
               console.log(err)                                                            //Catch Error
@@ -123,12 +129,28 @@ server.on('message', (msg) => {
         obs.send("SetCurrentScene", {
             'scene-name': msgArray[0].split("_").join(" ").toString(),                                          //Set to Scene from OSC
             }).catch(() => {
-              console.log(`Error: There is no Scene "${msgArray}" in OBS. Double check case sensitivity.`);
+              console.log(chalk.red(`[!] There is no Scene "${msgArray}" in OBS. Double check case sensitivity.`));
             }).catch((err) => {
             console.log(err)                                                //Catch Error
         });
 
       }
+
+    /*
+    * PREVIEW SCENE
+    */
+
+    // Preview scene with scene name as argument (no spaces)
+    else if (msg[0] === "/previewScene" && typeof msg[1] === "string") {
+        let sceneName = msg[1];
+        console.log(`OSC IN: ${msg[0]} ${sceneName}`)
+        obs.send("SetPreviewScene", {
+            "scene-name": sceneName
+        }).catch(() => {
+            console.log(chalk.red(`[!] Failed to set preview scene ${sceneName}. Is studio mode enabled?`));
+        });
+    }
+
       
       //Triggers to "GO" to the Next Scene
       else if (msg[0] === "/go"){                                          //When OSC Recieves a /go do...
@@ -150,7 +172,7 @@ server.on('message', (msg) => {
                     })   
                 }
         }).catch(() => {
-            console.log("Error: Invalid OSC Message");                              //Catch Error
+            console.log(chalk.red("[!] Invalid OSC Message"));                              //Catch Error
             });
         })
     } 
@@ -175,89 +197,87 @@ server.on('message', (msg) => {
                     })   
                 }
         }).catch(() => {
-            console.log("Error: Invalid OSC Message");
+            console.log(chalk.red("[!] Invalid OSC Message"));
             });
-        })
+        });
+    }
 
-
-    } 
     //Triggers Start Recording
     else if (msg[0] === "/startRecording"){
         obs.send("StartRecording").catch((err) => {
-            console.log(`ERROR: ${err.error}`)
-        })
-    
-    } 
+            console.log(chalk.red(`[!] ${err.error}`));
+        });
+    }
+
     //Triggers Stop Recording
     else if (msg[0] === "/stopRecording"){
         obs.send("StopRecording").catch((err) => {
-            console.log(`ERROR: ${err.error}`)
-        })
-    
-    } 
+            console.log(chalk.red(`[!] ${err.error}`));
+        });
+    }
+
     //Triggers Toggle Recording
     else if (msg[0] === "/toggleRecording"){
         obs.send("StartStopRecording").catch((err) => {
-            console.log(`ERROR: ${err.error}`)
-        })
-    
-    } 
+            console.log(chalk.red(`[!] ${err.error}`));
+        });
+    }
+
     //Triggers Start Streaming
     else if (msg[0] === "/startStreaming"){
         obs.send("StartStreaming").catch((err) => {
-            console.log(`ERROR: ${err.error}`)
-        })
-    
-    } 
+            console.log(chalk.red(`[!] ${err.error}`));
+        });
+    }
+
     //Triggers Stop Streaming
     else if (msg[0] === "/stopStreaming"){
         obs.send("StopStreaming").catch((err) => {
-            console.log(`ERROR: ${err.error}`)
-        })
-    
-    } 
+            console.log(chalk.red(`[!] ${err.error}`));
+        });
+    }
+
     //Triggers Toggle Streaming
     else if (msg[0] === "/toggleStreaming"){
         obs.send("StartStopStreaming").catch((err) => {
-            console.log(`ERROR: ${err.error}`)
-        })
-    
-    } 
+            console.log(chalk.red(`[!] ${err.error}`));
+        });
+    }
+
     //Triggers Pause Recording
     else if (msg[0] === "/pauseRecording"){
         obs.send("PauseRecording").catch((err) => {
-            console.log(`ERROR: ${err.error}`)
-        })
-    
-    } 
+            console.log(chalk.red(`[!] ${err.error}`));
+        });
+    }
     //Triggers Resume Recording
     else if (msg[0] === "/resumeRecording"){
         obs.send("ResumeRecording").catch((err) => {
-            console.log(`ERROR: ${err.error}`)
-        })
-    
-    } 
+            console.log(chalk.red(`[!] ${err.error}`));
+        });
+    }
+
     //Triggers Enable Studio Mode
     else if (msg[0] === "/enableStudioMode"){
         obs.send("EnableStudioMode").catch((err) => {
-            console.log(`ERROR: ${err.error}`)
-        })
-    
-    } 
+            console.log(chalk.red(`[!] ${err.error}`));
+        });
+    }
+
     //Triggers Disable Studio Mode
     else if (msg[0] === "/disableStudioMode"){
         obs.send("DisableStudioMode").catch((err) => {
-            console.log(`ERROR: ${err.error}`);
-        })
-    
-    } 
+            console.log(chalk.red(`[!] ${err.error}`));
+        });
+    }
+
     //Triggers Toggle Studio Mode
     else if (msg[0] === "/toggleStudioMode"){
         obs.send("ToggleStudioMode").catch((err) => {
-            console.log(err)
-        })
-    
-    } 
+            console.log(chalk.red(`[!] ${err.error}`));
+        });
+    }
+
     //Triggers Source Visibility On/Off
     else if (msg[0].includes('visible')){
         console.log(`OSC IN: ${msg}`)
@@ -270,13 +290,13 @@ server.on('message', (msg) => {
             visible = true
         }
         obs.send("SetSceneItemProperties", {
-            'scene-name': msgArray[0].split('_').join(' ').toString(),
-            'item': msgArray[1].split('_').join(' ').toString(),
+            'scene-name': msgArray[0],
+            'item': msgArray[1],
             'visible': visible,
         }).catch(() => {
-            console.log("Error: Invalid Syntax. Make Sure There Are NO SPACES in Scene Name and Source Name. /[Scene Name]/[Source Name]/visible 0 or 1, example: /Wide/VOX/visible 1")
-        })
-    } 
+            console.log(chalk.red("[!] Invalid syntax. Make sure there are NO SPACES in scene name and source name. /[sceneName]/[sourceName]/visible 0 or 1, e.g.: /Wide/VOX/visible 1"));
+        });
+    }
 
     //Triggers Filter Visibility On/Off
     else if (msg[0].includes('filterVisibility')){
@@ -294,8 +314,8 @@ server.on('message', (msg) => {
             'filterName': msgArray[1].split('_').join(' '),
             'filterEnabled': visiblef
         }).catch(() => {
-            console.log("Error: Invalid Syntax. Make Sure There Are NO SPACES in Source Name and Filter name. /[Scene Name]/[Source Name]/visible 0 or 1, example: /Wide/VOX/visible 1")
-        })
+            console.log(chalk.red("[!] Invalid syntax. Make sure there are NO SPACES in source name and filter name. /[sourceName]/[filterName]/filterVisibility 0 or 1, e.g.: /VOX/chroma/filterVisibility 1"));
+        });
     } 
 
     //Triggers the Source Opacity (via Filter > Color Correction)
@@ -308,8 +328,8 @@ server.on('message', (msg) => {
            'filterName': msgArray[1].split('_').join(' '),
            'filterSettings': {'opacity' : msg[1]*100}
         }).catch(() => {
-            console.log("ERROR: Opacity Command Syntax is Incorrect. Refer to Node OBSosc Github for Reference")
-        })  
+            console.log(chalk.red("[!] Opacity command incorrect syntax."));
+        });
     }
 
     //Set Transition Type and Duration
@@ -330,7 +350,7 @@ server.on('message', (msg) => {
             } else {
             console.log(`OSC IN: ${msg[0]} ${msg[1]} ${msg[2]}`)
             }
-            var makeSpace = msg[1].split('_').join(' ');
+            var makeSpace = msg[1].split('_').join(' ');  // TODO get rid of confusing replace and just disallow spaces in scene names
         obs.send("SetCurrentTransition", {
             'transition-name': makeSpace.toString()
         })
@@ -339,7 +359,7 @@ server.on('message', (msg) => {
             'duration': msg[2]
         })}
         } else {
-            console.log("ERROR: Invalid Transition Name. It's Case Sensitive. Or if it contains SPACES use '_' instead")
+            console.log(chalk.red("[!] Invalid transition name. If it contains spaces use '_' instead."));
         } 
         
     } 
@@ -356,8 +376,8 @@ server.on('message', (msg) => {
             'item': msgArray[1].toString().split('_').join(' '),
             'position': { 'x': x, 'y': y + 540}
         }).catch(() => {
-            console.log("ERROR: Invalis Position Syntax")
-        })
+            console.log(chalk.red("[!] Invalid position syntax"));
+        });
     }
 
     //Source Scale Translate
@@ -371,9 +391,9 @@ server.on('message', (msg) => {
             'item': msgArray[1].split('_').join(' ').toString(),
             'scale': { 'x': msg[1], 'y': msg[1]}
         }).catch(() => {
-            console.log("Error: Invalid Scale Syntax. Make Sure There Are NO SPACES in Scene Name and Source Name. /[Scene Name]/[Source Name]/visible 0 or 1, example: /Wide/VOX/visible 1")
-        })
-    } 
+            console.log(chalk.red("[!] Invalid scale syntax. Make sure there are NO SPACES in scene name and source name. /[sceneName]/[sourceName]/scale 0 or 1, e.g.: /Wide/VOX/scale 1"));
+        });
+    }
 
         //Source Rotation Translate
         else if (msg[0].includes('rotate')){
@@ -385,8 +405,8 @@ server.on('message', (msg) => {
                 'item': msgArray[1].split('_').join(' ').toString(),
                 'rotation': msg[1]
             }).catch(() => {
-                console.log("Error: Invalid Rotation Syntax. Make Sure There Are NO SPACES in Scene Name and Source Name. /[Scene Name]/[Source Name]/rotate 0 or 1, example: /Wide/VOX/rotate 1")
-            })
+                console.log(chalk.red("[!] Invalid rotation syntax. Make sure there are NO SPACES in scene name and source name. /[sceneName]/[sourceName]/rotate 0 or 1, e.g.: /Wide/VOX/rotate 1"));
+            });
         } 
 
     // ----- TouchOSC COMMANDS: ------
@@ -405,9 +425,9 @@ server.on('message', (msg) => {
             'item': currentSceneItem,
             'position': { 'x': x + 540, 'y': y, 'alignment': 0}
         }).catch(() => {
-            console.log("ERROR: Invalis Position Syntax")
-        })
-    })
+            console.log(chalk.red("[!] Invalid position syntax"));
+        });
+    });
     }
 
         //Source Position Select MoveX
@@ -424,7 +444,7 @@ server.on('message', (msg) => {
                 'item': currentSceneItem,
                 'position': { 'x': x + 540, 'alignment': 0}
             }).catch(() => {
-                console.log("ERROR: Invalis Position Syntax")
+                console.log(chalk.red("[!] Invalid position syntax"));
             })
         })
         }
@@ -443,7 +463,7 @@ server.on('message', (msg) => {
                 'item': currentSceneItem,
                 'position': { 'y': y, 'alignment': 0}
             }).catch(() => {
-                console.log("ERROR: Invalis Position Syntax")
+                console.log(chalk.red("[!] Invalid position syntax"));
             })
         })
         }
@@ -460,7 +480,7 @@ server.on('message', (msg) => {
             'item': currentSceneItem,
             'position': {'x': x, 'y':y, 'alignment': msg[1]}
         }).catch(() => {
-            console.log("Error: Select A Scene Item in OBS for Alignment")
+            console.log(chalk.red("[!] Select a scene item in OBS for alignment"));
         })
     })
     }
@@ -506,23 +526,43 @@ server.on('message', (msg) => {
             'item': currentSceneItem,
             'scale': {'x': msg[1], 'y': msg[1]}
         }).catch(() => {
-            console.log("Error: Select A Scene Item in OBS for Size")
+            console.log(chalk.red("Error: Select a scene item in OBS for size"));
         })
     })
     }
 
     //Log Error
     else {
-        console.log("Error: Invalid OSC command. Please refer to Node OBSosc on Github for Command List")
+        console.log(chalk.red("[!] Invalid OSC command. Please refer to Node OBSosc on Github for command list"));
     }
 });
 
-//OBS -> OSC Client (OUT)
-obs.on('SwitchScenes', data => {
-    if (enableObs2App){
-    client.send(`${oscOutPrefix}${data.sceneName}${oscOutSuffix}`, (err) => {  //Takes OBS Scene Name and Sends it Out as OSC String (Along with Prefix and Suffix)
+// OBS -> OSC
+function sceneTrigger(sceneName) {
+    // Extract QLab cue number from OBS scene if specified e.g. "My Scene [target]"
+    var cueNumber = sceneName.substring(
+        sceneName.lastIndexOf("[") + 1, sceneName.lastIndexOf("]")
+    );
+    if (!cueNumber) return;  // Scene doesn't request any cues to be triggered
+    console.log(`  Cue triggered: "${cueNumber}"`);
+    // Trigger cue with extracted cue number
+    client.send(`/cue/${cueNumber}/start`, (err) => {
         if (err) console.error(err);
-            });
-        }
-    })
-
+    });
+}
+obs.on("SwitchScenes", data => {
+    if (enableObs2Osc && lastTransition === "Cut") {
+        console.log(`Scene change: ${data.sceneName} (lastTransition: "${lastTransition}")`);
+        sceneTrigger(data.sceneName);
+    }
+});
+obs.on("TransitionBegin", data => {
+    if (enableObs2Osc && lastTransition !== "Cut") {
+        console.log(`Transition started: ${data.toScene} (lastTransition: "${lastTransition}")`);
+        sceneTrigger(data.toScene);
+    }
+});
+obs.on("SwitchTransition", data => {
+    console.log(`[+] Transition changed to: "${data.transitionName}"`);
+    lastTransition = data.transitionName;
+});
