@@ -3,7 +3,7 @@
   "version": "1.2.0",
   "main": "obsosc.js",
   "scripts": {
-    "start": "node Node-OBSosc.js",
+    "start": "node obs-osc-bridge.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Joe Shea",
