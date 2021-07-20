@@ -3,9 +3,9 @@
 // Install libs: npm install
 // Run: npm start
 
-const chalk = require('chalk');
-const OBSWebSocket = require('obs-websocket-js');
-const { Client, Server } = require('node-osc');
+const chalk = require("chalk");
+const OBSWebSocket = require("obs-websocket-js");
+const { Client, Server } = require("node-osc");
 const obs = new OBSWebSocket();
 
 // OBS Config
@@ -26,86 +26,86 @@ const enableObs2Osc = false;
 var lastTransition = null;
 
 
-//Connect to OBS
+// Connect to OBS
 obs.connect({
-        address: obsIp + ':'+ obsPort,
-        password: obsPassword
-    })
-    .then(() => {
-        console.log(`[+] Connected to OBS Websocket OK (${obsIp}:${obsPort})`);
-        return obs.send("GetSceneList");
-    })
-    .then(data => {
-        // Pull current screen transition
-        obs.send("GetCurrentTransition").then(data => {
-            lastTransition = data.name;
-            console.log(`[+] Cached current transition: "${data.name}"`);
-        });
-        // Log Total Scenes
-        console.log(`\n${data.scenes.length} Available Scenes:`);
-        data.scenes.forEach((thing, index) => {
-            console.log("    " + (index + 1) + " - " + thing.name);
-        });
-        // Log OSC Scene Syntax
-        console.log('\n-- Use "/scene [index]" For OSC Control --\n');
-    })
-    .catch(err => {
-        console.log(err);
-        console.log(chalk.red("[!] Make Sure OBS is Running and Websocket IP/port/password are correct!"));
+    address: obsIp + ":" + obsPort,
+    password: obsPassword
+})
+.then(() => {
+    console.log(`[+] Connected to OBS Websocket OK (${obsIp}:${obsPort})`);
+    return obs.send("GetSceneList");
+})
+.then(data => {
+    // Pull current screen transition
+    obs.send("GetCurrentTransition").then(data => {
+        lastTransition = data.name;
+        console.log(`[+] Cached current transition: "${data.name}"`);
     });
+    // Log total scenes
+    console.log(`\n${data.scenes.length} Available Scenes:`);
+    data.scenes.forEach((thing, index) => {
+        console.log("    " + (index + 1) + " - " + thing.name);
+    });
+    // Log OSC scene syntax
+    console.log('\n-- Use "/scene [index]" For OSC Control --\n');
+})
+.catch(err => {
+    console.log(err);
+    console.log(chalk.red("[!] Make Sure OBS is Running and Websocket IP/port/password are correct!"));
+});
 
 
 // Handler to Avoid Uncaught Exceptions.
-obs.on('error', err => {
-    console.error('socket error:', err);
+obs.on("error", err => {
+    console.error("socket error:", err);
 });
 
-//Connect to OSC
+// Connect to OSC
 const client = new Client(oscClientIp, oscPortOut);
 var server = new Server(oscPortIn, oscServerIp);
 
-//OSC Server (IN)
-server.on('listening', () => {
-  console.log(`[+] OSC Server is listening on ${oscServerIp}:${oscPortIn}`);
-  console.log(`[+] OSC Server is sending back on ${oscClientIp}:${oscPortOut}`);
-})
+// OSC Server (IN)
+server.on("listening", () => {
+    console.log(`[+] OSC Server is listening on ${oscServerIp}:${oscPortIn}`);
+    console.log(`[+] OSC Server is sending back on ${oscClientIp}:${oscPortOut}`);
+});
 
-//OSC -> OBS
-server.on('message', (msg) => {
+// OSC -> OBS
+server.on("message", (msg) => {
     /*
      * SCENE (transition to immediately)
      */
 
-    //Trigger Scene by Index Number
-  if (msg[0] === "/scene" && typeof msg[1] === 'number') {
-      var oscMessage = msg[1] - 1;                                          //Convert Index Number to Start at 1
-      var oscMessage = Math.floor(oscMessage);                              //Converts Any Float Argument to Lowest Integer
-    return obs.send('GetSceneList').then(data => {                          //Request Scene List Array
-        console.log(`OSC IN: ${msg[0]} ${oscMessage + 1} (${data.scenes[oscMessage].name})`)
-        obs.send("SetCurrentScene", {
-            'scene-name': data.scenes[oscMessage].name                      //Set to Scene from OSC
-            })
+    // Trigger scene by index number
+    if (msg[0] === "/scene" && typeof msg[1] === "number") {
+        let oscMessage = msg[1] - 1;  // Convert index number to start at 1
+        oscMessage = Math.floor(oscMessage);  // Converts any float argument to lowest integer
+        return obs.send("GetSceneList").then(data => {
+            console.log(`OSC IN: ${msg[0]} ${oscMessage + 1} (${data.scenes[oscMessage].name})`);
+            obs.send("SetCurrentScene", {
+                "scene-name": data.scenes[oscMessage].name,
+            });
         }).catch(() => {
-            console.log("Error: Out Of '/scene' Range");                    //Catch Error
+            console.log("Error: Out Of '/scene' Range");
         });
-    } 
+    }
 
-    //Trigger Scene if Argument is a String and Contains a Space
-    else if (msg[0] === "/scene" && msg.length > 2){                      //When OSC Recieves a /scene do...                                       
-        var firstIndex = msg.shift();                                       //Removes First Index from 'msg' and Stores it to Another Variable
-        let oscMultiArg = msg.join(' ');
-      return obs.send('GetSceneList').then(data => {                        //Request Scene List Array
-          console.log(`OSC IN: ${firstIndex} ${oscMultiArg}`)
-          obs.send("SetCurrentScene", {
-              'scene-name': oscMultiArg                                     //Set to Scene from OSC
-              }).catch(() => {
-                console.log(chalk.red(`[!] There is no scene "${oscMultiArg}" in OBS. Double check case sensitivity.`));
-              })
-          }).catch((err) => {
-              console.log(err)                                                            //Catch Error
-          });
-      } 
-      
+    // Trigger scene if argument is a string and contains a space
+    else if (msg[0] === "/scene" && msg.length > 2) {
+        let firstIndex = msg.shift();
+        let oscMultiArg = msg.join(" ");
+        return obs.send("GetSceneList").then(data => {
+            console.log(`OSC IN: ${firstIndex} ${oscMultiArg}`);
+            obs.send("SetCurrentScene", {
+                "scene-name": oscMultiArg,
+            }).catch(() => {
+                  console.log(chalk.red(`[!] There is no scene '${oscMultiArg}' in OBS. Double check case sensitivity.`));
+            });
+        }).catch((err) => {
+            console.log(err);
+        });
+    }
+
       //Trigger Scene if Argument is a String
       else if (msg[0] === "/scene" && typeof msg[1] === 'string'){          //When OSC Recieves a /scene do...
         var oscMessage = msg[1]; 
