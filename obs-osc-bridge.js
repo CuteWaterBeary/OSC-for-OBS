@@ -312,15 +312,15 @@ server.on("message", (msg) => {
         });
     } 
 
-    //Triggers the Source Opacity (via Filter > Color Correction)
-    else if (msg[0].includes('opacity')){
-        console.log(`OSC IN: ${msg[0]} ${msg[1]}`)
-        var msgArray = msg[0].split("/")
-        msgArray.shift()
+    // Triggers the source opacity (via filter > color correction)
+    else if (msg[0].includes("opacity")) {
+        console.log(`OSC IN: ${msg[0]} ${msg[1]}`);
+        let msgArray = msg[0].split("/");
+        msgArray.shift();
         obs.send("SetSourceFilterSettings", {
-           'sourceName': msgArray[0].split('_').join(' '),
-           'filterName': msgArray[1].split('_').join(' '),
-           'filterSettings': {'opacity' : msg[1]*100}
+            "sourceName": msgArray[0].split("_").join(" "),
+            "filterName": msgArray[1].split("_").join(" "),
+            "filterSettings": {"opacity": msg[1]*100},
         }).catch(() => {
             console.log(chalk.red("[!] Opacity command incorrect syntax."));
         });
