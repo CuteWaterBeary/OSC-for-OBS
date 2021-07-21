@@ -326,38 +326,37 @@ server.on("message", (msg) => {
         });
     }
 
-    //Set Transition Type and Duration
-    else if (msg[0] === '/transition'){
+    // Set transition type and duration
+    else if (msg[0] === "/transition") {
         if (msg[1] === "Cut" || msg[1] === "Stinger") {
-            console.log(`OSC IN: ${msg[0]} ${msg[1]}`)
+            console.log(`OSC IN: ${msg[0]} ${msg[1]}`);
             obs.send("SetCurrentTransition", {
-                'transition-name': msg[1].toString()
+                "transition-name": msg[1].toString(),
             }).catch(() => {
-                console.log("Whoops")
-            })
-        } else if(msg[1] === "Fade" || msg[1] === "Move" || msg[1] === "Luma_Wipe" || msg[1] === "Fade_to_Color" || msg[1] === "Slide" || msg[1] === "Swipe"){
-            if (msg[2] === undefined){
+                console.log("Whoops");  // TODO: make this error more helpful
+            });
+        } else if (msg[1] === "Fade" || msg[1] === "Move" || msg[1] === "Luma_Wipe" || msg[1] === "Fade_to_Color" || msg[1] === "Slide" || msg[1] === "Swipe") {
+            if (msg[2] === undefined) {
                 obs.send("GetTransitionDuration").then(data => {
-                    var tranisionTime = data["transition-duration"]
-                    console.log(`OSC IN: ${msg[0]} ${msg[1]}\nCurrent Duration: ${tranisionTime}`)
-                })
+                    console.log(`OSC IN: ${msg[0]} ${msg[1]}\nCurrent Duration: ${data["transition-duration"]}`);
+                });
             } else {
-            console.log(`OSC IN: ${msg[0]} ${msg[1]} ${msg[2]}`)
+                console.log(`OSC IN: ${msg[0]} ${msg[1]} ${msg[2]}`);
             }
-            var makeSpace = msg[1].split('_').join(' ');  // TODO get rid of confusing replace and just disallow spaces in scene names
-        obs.send("SetCurrentTransition", {
-            'transition-name': makeSpace.toString()
-        })
-        if(msg.length === 3){
-        obs.send("SetTransitionDuration", {
-            'duration': msg[2]
-        })}
+            let makeSpace = msg[1].split("_").join(" ");  // TODO get rid of confusing replace and just disallow spaces in scene names
+            obs.send("SetCurrentTransition", {
+                "transition-name": makeSpace.toString(),
+            });
+            if (msg.length === 3) {
+                obs.send("SetTransitionDuration", {
+                    "duration": msg[2],
+                });
+            }
         } else {
             console.log(chalk.red("[!] Invalid transition name. If it contains spaces use '_' instead."));
-        } 
-        
-    } 
-    
+        }
+    }
+
     //Source Position Translate
     else if (msg[0].includes('position')){
         console.log(`OSC IN: ${msg}`)
