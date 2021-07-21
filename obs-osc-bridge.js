@@ -59,7 +59,7 @@ obs.on("error", err => {
 
 // Connect to OSC
 const client = new Client(oscClientIp, oscPortOut);
-var server = new Server(oscPortIn, oscServerIp);
+const server = new Server(oscPortIn, oscServerIp);
 
 // OSC Server (IN)
 server.on("listening", () => {
