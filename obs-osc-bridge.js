@@ -494,23 +494,23 @@ server.on("message", (msg) => {
 
     // Set transition override
     else if(msg[0] === "/transOverrideDuration") {
-        let currentSceneName
-        console.log(`OSC IN: ${msg}`)
+        let currentSceneName;
+        console.log(`OSC IN: ${msg}`);
         return obs.send("GetCurrentScene").then(data => {
-            currentSceneName = data.name
-        return obs.send("GetSceneTransitionOverride", {
-            'sceneName': currentSceneName
-        }).then(data => {
-            obs.send("SetSceneTransitionOverride", {
-                'sceneName': currentSceneName,
-                'transitionName': data.transitionName,
-                'transitionDuration': Math.floor(msg[1])
-            })
-        })
-        })
+            currentSceneName = data.name;
+            return obs.send("GetSceneTransitionOverride", {
+                "sceneName": currentSceneName,
+            }).then(data => {
+                obs.send("SetSceneTransitionOverride", {
+                    "sceneName": currentSceneName,
+                    "transitionName": data.transitionName,
+                    "transitionDuration": Math.floor(msg[1]),
+                });
+            });
+        });
     }
 
-    //Source Size
+    // Source size
     else if (msg[0] === '/size'){
         return obs.send("GetCurrentScene").then(data => {
         console.log(`OSC IN: ${msg}`)
