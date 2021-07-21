@@ -447,10 +447,10 @@ server.on("message", (msg) => {
     else if (msg[0] === "/movey") {
         return obs.send("GetCurrentScene").then(data => {
             console.log(`OSC IN: ${msg}`);
-            var msgArray = msg[0].split("/");  // FIXME: this doesn't do anything, nor the next line
+            let msgArray = msg[0].split("/");  // FIXME: this doesn't do anything, nor the next line
             msgArray.shift();
-            var x = Math.floor((msg[2]*2000));
-            var y = Math.floor((msg[1]*2000) + 960);
+            let x = Math.floor((msg[2]*2000));
+            let y = Math.floor((msg[1]*2000) + 960);
             console.log(x + " " + y);
             obs.send("SetSceneItemProperties", {
                 "scene-name": data.name,
@@ -462,38 +462,38 @@ server.on("message", (msg) => {
         });
     }
 
-    //Source Align
-    else if (msg[0] === '/align'){
+    // Source align
+    else if (msg[0] === "/align") {
         return obs.send("GetCurrentScene").then(data => {
-        console.log(`OSC IN: ${msg}`)
-        var x = 0 + 960
-        var y = 0 + 540
-        obs.send("SetSceneItemProperties", {
-            'scene-name': data.name.toString(),
-            'item': currentSceneItem,
-            'position': {'x': x, 'y':y, 'alignment': msg[1]}
-        }).catch(() => {
-            console.log(chalk.red("[!] Select a scene item in OBS for alignment"));
-        })
-    })
+            console.log(`OSC IN: ${msg}`);
+            let x = 960;
+            let y = 540;
+            obs.send("SetSceneItemProperties", {
+                "scene-name": data.name.toString(),
+                "item": currentSceneItem,  // FIXME: wtf this doesn't exist
+                "position": {"x": x, "y":y, "alignment": msg[1]}
+            }).catch(() => {
+                console.log(chalk.red("[!] Select a scene item in OBS for alignment"));
+            });
+        });
     }
 
-    //Set Transition Override
-    else if(msg[0].includes('/transOverrideType')){
-        console.log(`OSC IN: ${msg}`)
-        var msgArray = msg[0].split("/")
-        msgArray.shift()
-        console.log("Messge array: " + msgArray)
+    // Set transition override
+    else if (msg[0].includes("/transOverrideType")) {
+        console.log(`OSC IN: ${msg}`);
+        let msgArray = msg[0].split("/");
+        msgArray.shift();
+        console.log("Messge array: " + msgArray);
         return obs.send("GetCurrentScene").then(data => {
-        obs.send("SetSceneTransitionOverride", {
-            'sceneName': data.name,
-            'transitionName': msgArray[1].toString(),
-        })
-    })
+            obs.send("SetSceneTransitionOverride", {
+                "sceneName": data.name,
+                "transitionName": msgArray[1].toString(),
+            });
+        });
     }
 
-    //Set Transition Override
-    else if(msg[0] === '/transOverrideDuration'){
+    // Set transition override
+    else if(msg[0] === "/transOverrideDuration") {
         let currentSceneName
         console.log(`OSC IN: ${msg}`)
         return obs.send("GetCurrentScene").then(data => {
