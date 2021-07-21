@@ -23,7 +23,7 @@ const enableObs2Osc = false;
 
 // Cache last transition so we know how to trigger it (cut works differently to all the others)
 // See https://github.com/Palakis/obs-websocket/blob/4.x-current/docs/generated/protocol.md#transitionbegin
-var lastTransition = null;
+var lastTransition = null;  /* eslint no-var: "off" */
 
 
 // Connect to OBS
