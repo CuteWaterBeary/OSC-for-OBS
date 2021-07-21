@@ -31,7 +31,7 @@ obs.connect({
     address: obsIp + ":" + obsPort,
     password: obsPassword,
 }).then(() => {
-    console.log(`[+] Connected to OBS Websocket OK (${obsIp}:${obsPort})`);
+    console.log(`[+] Connected to OBS websocket OK (${obsIp}:${obsPort})`);
     return obs.send("GetSceneList");
 }).then(data => {
     // Pull current screen transition
@@ -40,19 +40,19 @@ obs.connect({
         console.log(`[+] Cached current transition: "${data.name}"`);
     });
     // Log total scenes
-    console.log(`\n${data.scenes.length} Available Scenes:`);
+    console.log(`\n${data.scenes.length} Available scenes:`);
     data.scenes.forEach((thing, index) => {
         console.log("    " + (index + 1) + " - " + thing.name);
     });
     // Log OSC scene syntax
-    console.log("\n-- Use '/scene [index]' For OSC Control --\n");
+    console.log("\n-- Use '/scene [index]' for OSC control --\n");
 }).catch(err => {
     console.log(err);
-    console.log(chalk.red("[!] Make Sure OBS is Running and Websocket IP/port/password are correct!"));
+    console.log(chalk.red("[!] Make sure OBS is running and websocket IP/port/password are correct!"));
 });
 
 
-// Handler to Avoid Uncaught Exceptions.
+// Handler to avoid uncaught exceptions
 obs.on("error", err => {
     console.error("socket error:", err);
 });
@@ -83,7 +83,7 @@ server.on("message", (msg) => {
                 "scene-name": data.scenes[oscMessage].name,
             });
         }).catch(() => {
-            console.log("Error: Out Of '/scene' Range");
+            console.log("Error: Out of '/scene' range");
         });
     }
 
@@ -126,7 +126,7 @@ server.on("message", (msg) => {
         obs.send("SetCurrentScene", {
             "scene-name": msgArray[0].split("_").join(" ").toString(),  // TODO get rid of confusing replace and just disallow spaces in scene names
         }).catch(() => {
-            console.log(chalk.red(`[!] There is no Scene "${msgArray}" in OBS. Double check case sensitivity.`));
+            console.log(chalk.red(`[!] There is no scene "${msgArray}" in OBS. Double check case sensitivity.`));
         }).catch((err) => {
             console.log(err);
         });
@@ -167,7 +167,7 @@ server.on("message", (msg) => {
                     });
                 }
             }).catch(() => {
-                console.log(chalk.red("[!] Invalid OSC Message"));
+                console.log(chalk.red("[!] Invalid OSC message"));
             });
         });
     }
@@ -190,7 +190,7 @@ server.on("message", (msg) => {
                     });
                 }
             }).catch(() => {
-                console.log(chalk.red("[!] Invalid OSC Message"));
+                console.log(chalk.red("[!] Invalid OSC message"));
             });
         });
     }
@@ -530,7 +530,10 @@ server.on("message", (msg) => {
     }
 });
 
-// OBS -> OSC
+
+/*
+ * OBS -> OSC
+ */
 function sceneTrigger(sceneName) {
     // Extract QLab cue number from OBS scene if specified e.g. "My Scene [target]"
     let cueNumber = sceneName.substring(
