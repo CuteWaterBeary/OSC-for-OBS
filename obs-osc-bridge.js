@@ -357,17 +357,17 @@ server.on("message", (msg) => {
         }
     }
 
-    //Source Position Translate
-    else if (msg[0].includes('position')){
-        console.log(`OSC IN: ${msg}`)
-        var msgArray = msg[0].split("/")
-        msgArray.shift()
-        var x = msg[1] + 960
-        var y = msg[2] - (msg[2] * 2)
+    // Source position translate
+    else if (msg[0].includes("position")) {
+        console.log(`OSC IN: ${msg}`);
+        let msgArray = msg[0].split("/");
+        msgArray.shift();
+        let x = msg[1] + 960;
+        let y = msg[2] - (msg[2] * 2);
         obs.send("SetSceneItemProperties", {
-            'scene-name': msgArray[0].toString().split('_').join(' '),
-            'item': msgArray[1].toString().split('_').join(' '),
-            'position': { 'x': x, 'y': y + 540}
+            "scene-name": msgArray[0].toString().split("_").join(" "),
+            "item": msgArray[1].toString().split("_").join(" "),
+            "position": {"x": x, "y": y + 540},
         }).catch(() => {
             console.log(chalk.red("[!] Invalid position syntax"));
         });
