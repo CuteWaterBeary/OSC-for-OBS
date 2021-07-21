@@ -387,21 +387,23 @@ server.on("message", (msg) => {
         });
     }
 
-        //Source Rotation Translate
-        else if (msg[0].includes('rotate')){
-            console.log(`OSC IN: ${msg}`)
-            var msgArray = msg[0].split("/")
-            msgArray.shift()
-            obs.send("SetSceneItemProperties", {
-                'scene-name': msgArray[0].split('_').join(' ').toString(),
-                'item': msgArray[1].split('_').join(' ').toString(),
-                'rotation': msg[1]
-            }).catch(() => {
-                console.log(chalk.red("[!] Invalid rotation syntax. Make sure there are NO SPACES in scene name and source name. /[sceneName]/[sourceName]/rotate 0 or 1, e.g.: /Wide/VOX/rotate 1"));
-            });
-        } 
+    // Source rotation translate
+    else if (msg[0].includes("rotate")) {
+        console.log(`OSC IN: ${msg}`);
+        let msgArray = msg[0].split("/");
+        msgArray.shift();
+        obs.send("SetSceneItemProperties", {
+            "scene-name": msgArray[0].split("_").join(" ").toString(),
+            "item": msgArray[1].split("_").join(" ").toString(),
+            "rotation": msg[1],
+        }).catch(() => {
+            console.log(chalk.red("[!] Invalid rotation syntax. Make sure there are NO SPACES in scene name and source name. /[sceneName]/[sourceName]/rotate 0 or 1, e.g.: /Wide/VOX/rotate 1"));
+        });
+    }
 
-    // ----- TouchOSC COMMANDS: ------
+    /*
+    * TOUCHOSC COMMANDS
+    */
 
     //Source Position Select Move
     else if (msg[0] === '/move'){
