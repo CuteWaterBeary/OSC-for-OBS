@@ -96,7 +96,7 @@ server.on("message", (msg) => {
             obs.send("SetCurrentScene", {
                 "scene-name": oscMultiArg,
             }).catch(() => {
-                  console.log(chalk.red(`[!] There is no scene '${oscMultiArg}' in OBS. Double check case sensitivity.`));
+                console.log(chalk.red(`[!] There is no scene '${oscMultiArg}' in OBS. Double check case sensitivity.`));
             });
         }).catch((err) => {
             console.log(err);
@@ -118,20 +118,19 @@ server.on("message", (msg) => {
         });
     }
 
-      //Trigger Scene if Scene Name is in the OSC String
-      else if (msg[0].includes('/scene') && msg.length === 1){
-        var msgArray = msg[0].split("/")
-        msgArray.shift()
-        msgArray.shift()
+    // Trigger scene if scene name is in the OSC string
+    else if (msg[0].includes("/scene") && msg.length === 1) {
+        let msgArray = msg[0].split("/");
+        msgArray.shift();
+        msgArray.shift();
         obs.send("SetCurrentScene", {
-            'scene-name': msgArray[0].split("_").join(" ").toString(),                                          //Set to Scene from OSC
-            }).catch(() => {
-              console.log(chalk.red(`[!] There is no Scene "${msgArray}" in OBS. Double check case sensitivity.`));
-            }).catch((err) => {
-            console.log(err)                                                //Catch Error
+            "scene-name": msgArray[0].split("_").join(" ").toString(),  // TODO get rid of confusing replace and just disallow spaces in scene names
+        }).catch(() => {
+            console.log(chalk.red(`[!] There is no Scene "${msgArray}" in OBS. Double check case sensitivity.`));
+        }).catch((err) => {
+            console.log(err);
         });
-
-      }
+    }
 
     /*
     * PREVIEW SCENE
@@ -140,9 +139,9 @@ server.on("message", (msg) => {
     // Preview scene with scene name as argument (no spaces)
     else if (msg[0] === "/previewScene" && typeof msg[1] === "string") {
         let sceneName = msg[1];
-        console.log(`OSC IN: ${msg[0]} ${sceneName}`)
+        console.log(`OSC IN: ${msg[0]} ${sceneName}`);
         obs.send("SetPreviewScene", {
-            "scene-name": sceneName
+            "scene-name": sceneName,
         }).catch(() => {
             console.log(chalk.red(`[!] Failed to set preview scene ${sceneName}. Is studio mode enabled?`));
         });
