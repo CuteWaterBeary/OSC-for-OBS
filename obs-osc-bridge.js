@@ -511,17 +511,17 @@ server.on("message", (msg) => {
     }
 
     // Source size
-    else if (msg[0] === '/size'){
+    else if (msg[0] === "/size") {
         return obs.send("GetCurrentScene").then(data => {
-        console.log(`OSC IN: ${msg}`)
-        obs.send("SetSceneItemProperties", {
-            'scene-name': data.name.toString(),
-            'item': currentSceneItem,
-            'scale': {'x': msg[1], 'y': msg[1]}
-        }).catch(() => {
-            console.log(chalk.red("Error: Select a scene item in OBS for size"));
-        })
-    })
+            console.log(`OSC IN: ${msg}`);
+            obs.send("SetSceneItemProperties", {
+                "scene-name": data.name.toString(),
+                "item": currentSceneItem,
+                "scale": {"x": msg[1], "y": msg[1]}
+            }).catch(() => {
+                console.log(chalk.red("Error: Select a scene item in OBS for size"));
+            });
+        });
     }
 
     //Log Error
