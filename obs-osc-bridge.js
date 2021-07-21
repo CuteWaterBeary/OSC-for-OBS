@@ -148,30 +148,29 @@ server.on("message", (msg) => {
     }
 
       
-      //Triggers to "GO" to the Next Scene
-      else if (msg[0] === "/go"){                                          //When OSC Recieves a /go do...
-            
-        return obs.send('GetSceneList').then(data => {                      //Request Scene List Array
-            
-            var cleanArray = []
-            var rawSceneList = data                                         //Assign Get Scene List 'data' to variable 
-            data.scenes.forEach(element => {cleanArray.push(element.name)}); //Converting Scene List To a Cleaner(Less Nested) Array (Getting the Desired Nested Values) 
-            return obs.send("GetCurrentScene").then(data => {               //Request Current Scene Name
-                var currentSceneIndex = cleanArray.indexOf(data.name)       //Get the Index of the Current Scene Referenced from the Clean Array
-                if (currentSceneIndex + 1 >= rawSceneList.scenes.length){   //When the Current Scene is More than the Total Scenes...
-                obs.send("SetCurrentScene", {
-                        'scene-name': rawSceneList.scenes[0].name           //Set the Scene to First Scene
-                })
-             } else {
-                obs.send("SetCurrentScene", {
-                    'scene-name': rawSceneList.scenes[currentSceneIndex + 1].name  //Set Scene to Next Scene (Referenced from the Current Scene and Array)
-                    })   
+    // Triggers to "GO" to the next scene
+    else if (msg[0] === "/go") {
+        return obs.send("GetSceneList").then(data => {
+            let cleanArray = [];
+            let rawSceneList = data;
+            data.scenes.forEach(element => { cleanArray.push(element.name) }); //Converting Scene List To a Cleaner(Less Nested) Array (Getting the Desired Nested Values)
+            return obs.send("GetCurrentScene").then(data => {
+                let currentSceneIndex = cleanArray.indexOf(data.name);
+                // TODO: I think this if is for wrap-around from last scene to first, need to check this and comment as applicable
+                if (currentSceneIndex + 1 >= rawSceneList.scenes.length) {
+                    obs.send("SetCurrentScene", {
+                        "scene-name": rawSceneList.scenes[0].name,
+                    });
+                } else {
+                    obs.send("SetCurrentScene", {
+                        "scene-name": rawSceneList.scenes[currentSceneIndex + 1].name,
+                    });
                 }
-        }).catch(() => {
-            console.log(chalk.red("[!] Invalid OSC Message"));                              //Catch Error
+            }).catch(() => {
+                console.log(chalk.red("[!] Invalid OSC Message"));
             });
-        })
-    } 
+        });
+    }
     
     //Triggers Previous Scene to go "BACK"
     else if (msg[0] === "/back"){                                                 //Same Concept as Above Except Going to the Previous Scene
