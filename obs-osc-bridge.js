@@ -373,16 +373,15 @@ server.on("message", (msg) => {
         });
     }
 
-    //Source Scale Translate
-    else if (msg[0].includes('scale')){
-        console.log(`OSC IN: ${msg}`)
-        var msgArray = msg[0].split("/")
-        msgArray.shift()
-        var visible;
+    // Source scale translate
+    else if (msg[0].includes("scale")) {
+        console.log(`OSC IN: ${msg}`);
+        let msgArray = msg[0].split("/");
+        msgArray.shift();
         obs.send("SetSceneItemProperties", {
-            'scene-name': msgArray[0].split('_').join(' ').toString(),
-            'item': msgArray[1].split('_').join(' ').toString(),
-            'scale': { 'x': msg[1], 'y': msg[1]}
+            "scene-name": msgArray[0].split("_").join(" ").toString(),
+            "item": msgArray[1].split("_").join(" ").toString(),
+            "scale": {"x": msg[1], "y": msg[1]},
         }).catch(() => {
             console.log(chalk.red("[!] Invalid scale syntax. Make sure there are NO SPACES in scene name and source name. /[sceneName]/[sourceName]/scale 0 or 1, e.g.: /Wide/VOX/scale 1"));
         });
