@@ -133,8 +133,8 @@ server.on("message", (msg) => {
     }
 
     /*
-    * PREVIEW SCENE
-    */
+     * PREVIEW SCENE
+     */
 
     // Preview scene with scene name as argument (no spaces)
     else if (msg[0] === "/previewScene" && typeof msg[1] === "string") {
@@ -153,7 +153,7 @@ server.on("message", (msg) => {
         return obs.send("GetSceneList").then(data => {
             let cleanArray = [];
             let rawSceneList = data;
-            data.scenes.forEach(element => { cleanArray.push(element.name); }); //Converting Scene List To a Cleaner(Less Nested) Array (Getting the Desired Nested Values)
+            data.scenes.forEach(element => { cleanArray.push(element.name); });
             return obs.send("GetCurrentScene").then(data => {
                 let currentSceneIndex = cleanArray.indexOf(data.name);
                 // TODO: I think this if is for wrap-around from last scene to first, need to check this and comment as applicable
@@ -402,8 +402,8 @@ server.on("message", (msg) => {
     }
 
     /*
-    * TOUCHOSC COMMANDS
-    */
+     * TOUCHOSC COMMANDS
+     */
 
     // Source position select move
     else if (msg[0] === "/move") {
@@ -524,7 +524,7 @@ server.on("message", (msg) => {
         });
     }
 
-    //Log Error
+    // Log catch-all error
     else {
         console.log(chalk.red("[!] Invalid OSC command. Please refer to Node OBSosc on Github for command list"));
     }
@@ -533,7 +533,7 @@ server.on("message", (msg) => {
 // OBS -> OSC
 function sceneTrigger(sceneName) {
     // Extract QLab cue number from OBS scene if specified e.g. "My Scene [target]"
-    var cueNumber = sceneName.substring(
+    let cueNumber = sceneName.substring(
         sceneName.lastIndexOf("[") + 1, sceneName.lastIndexOf("]")
     );
     if (!cueNumber) return;  // Scene doesn't request any cues to be triggered
