@@ -153,7 +153,7 @@ server.on("message", (msg) => {
         return obs.send("GetSceneList").then(data => {
             let cleanArray = [];
             let rawSceneList = data;
-            data.scenes.forEach(element => { cleanArray.push(element.name) }); //Converting Scene List To a Cleaner(Less Nested) Array (Getting the Desired Nested Values)
+            data.scenes.forEach(element => { cleanArray.push(element.name); }); //Converting Scene List To a Cleaner(Less Nested) Array (Getting the Desired Nested Values)
             return obs.send("GetCurrentScene").then(data => {
                 let currentSceneIndex = cleanArray.indexOf(data.name);
                 // TODO: I think this if is for wrap-around from last scene to first, need to check this and comment as applicable
@@ -172,27 +172,25 @@ server.on("message", (msg) => {
         });
     }
     
-    //Triggers Previous Scene to go "BACK"
-    else if (msg[0] === "/back"){                                                 //Same Concept as Above Except Going to the Previous Scene
-
-        return obs.send('GetSceneList').then(data => {
-            
-            var cleanArray = []
-            var rawSceneList = data
-            data.scenes.forEach(element => {cleanArray.push(element.name)});
+    // Triggers previous scene to go "BACK"
+    else if (msg[0] === "/back") {
+        return obs.send("GetSceneList").then(data => {
+            let cleanArray = [];
+            let rawSceneList = data;
+            data.scenes.forEach(element => { cleanArray.push(element.name); });
             return obs.send("GetCurrentScene").then(data => {
-                var currentSceneIndex = cleanArray.indexOf(data.name)
-                if (currentSceneIndex - 1 <= -1){
-                obs.send("SetCurrentScene", {
-                        'scene-name': rawSceneList.scenes[rawSceneList.scenes.length - 1].name 
-                })
-             } else {
-                obs.send("SetCurrentScene", {
-                    'scene-name': rawSceneList.scenes[currentSceneIndex - 1].name
-                    })   
+                let currentSceneIndex = cleanArray.indexOf(data.name);
+                if (currentSceneIndex - 1 <= -1) {
+                    obs.send("SetCurrentScene", {
+                        "scene-name": rawSceneList.scenes[rawSceneList.scenes.length - 1].name,
+                    });
+                } else {
+                    obs.send("SetCurrentScene", {
+                        "scene-name": rawSceneList.scenes[currentSceneIndex - 1].name,
+                    });
                 }
-        }).catch(() => {
-            console.log(chalk.red("[!] Invalid OSC Message"));
+            }).catch(() => {
+                console.log(chalk.red("[!] Invalid OSC Message"));
             });
         });
     }
