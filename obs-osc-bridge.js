@@ -195,54 +195,55 @@ server.on("message", (msg) => {
         });
     }
 
-    //Triggers Start Recording
-    else if (msg[0] === "/startRecording"){
+    // Triggers start recording
+    else if (msg[0] === "/startRecording") {
         obs.send("StartRecording").catch((err) => {
             console.log(chalk.red(`[!] ${err.error}`));
         });
     }
 
-    //Triggers Stop Recording
-    else if (msg[0] === "/stopRecording"){
+    // Triggers stop recording
+    else if (msg[0] === "/stopRecording") {
         obs.send("StopRecording").catch((err) => {
             console.log(chalk.red(`[!] ${err.error}`));
         });
     }
 
-    //Triggers Toggle Recording
-    else if (msg[0] === "/toggleRecording"){
+    // Triggers toggle recording
+    else if (msg[0] === "/toggleRecording") {
         obs.send("StartStopRecording").catch((err) => {
             console.log(chalk.red(`[!] ${err.error}`));
         });
     }
 
-    //Triggers Start Streaming
-    else if (msg[0] === "/startStreaming"){
+    // Triggers start streaming
+    else if (msg[0] === "/startStreaming") {
         obs.send("StartStreaming").catch((err) => {
             console.log(chalk.red(`[!] ${err.error}`));
         });
     }
 
-    //Triggers Stop Streaming
-    else if (msg[0] === "/stopStreaming"){
+    // Triggers stop streaming
+    else if (msg[0] === "/stopStreaming") {
         obs.send("StopStreaming").catch((err) => {
             console.log(chalk.red(`[!] ${err.error}`));
         });
     }
 
-    //Triggers Toggle Streaming
-    else if (msg[0] === "/toggleStreaming"){
+    // Triggers toggle streaming
+    else if (msg[0] === "/toggleStreaming") {
         obs.send("StartStopStreaming").catch((err) => {
             console.log(chalk.red(`[!] ${err.error}`));
         });
     }
 
-    //Triggers Pause Recording
-    else if (msg[0] === "/pauseRecording"){
+    // Triggers pause recording
+    else if (msg[0] === "/pauseRecording") {
         obs.send("PauseRecording").catch((err) => {
             console.log(chalk.red(`[!] ${err.error}`));
         });
     }
+
     //Triggers Resume Recording
     else if (msg[0] === "/resumeRecording"){
         obs.send("ResumeRecording").catch((err) => {
@@ -250,22 +251,22 @@ server.on("message", (msg) => {
         });
     }
 
-    //Triggers Enable Studio Mode
-    else if (msg[0] === "/enableStudioMode"){
+    // Triggers enable studio mode
+    else if (msg[0] === "/enableStudioMode") {
         obs.send("EnableStudioMode").catch((err) => {
             console.log(chalk.red(`[!] ${err.error}`));
         });
     }
 
-    //Triggers Disable Studio Mode
-    else if (msg[0] === "/disableStudioMode"){
+    // Triggers disable studio mode
+    else if (msg[0] === "/disableStudioMode") {
         obs.send("DisableStudioMode").catch((err) => {
             console.log(chalk.red(`[!] ${err.error}`));
         });
     }
 
-    //Triggers Toggle Studio Mode
-    else if (msg[0] === "/toggleStudioMode"){
+    // Triggers toggle studio mode
+    else if (msg[0] === "/toggleStudioMode") {
         obs.send("ToggleStudioMode").catch((err) => {
             console.log(chalk.red(`[!] ${err.error}`));
         });
