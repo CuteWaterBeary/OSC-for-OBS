@@ -409,7 +409,7 @@ server.on("message", (msg) => {
     else if (msg[0] === "/move") {
         return obs.send("GetCurrentScene").then(data => {
             console.log(`OSC IN: ${msg}`);
-            var msgArray = msg[0].split("/");  // FIXME: this doesn't do anything, nor the next line
+            let msgArray = msg[0].split("/");  // FIXME: this doesn't do anything, nor the next line
             msgArray.shift();
             let x = Math.floor(msg[2]*2000);
             let y = Math.floor((msg[1]*2000) + 960);
@@ -424,45 +424,44 @@ server.on("message", (msg) => {
         });
     }
 
-        //Source Position Select MoveX
-        else if (msg[0] === '/movex'){
-            return obs.send("GetCurrentScene").then(data => {
-            console.log(`OSC IN: ${msg}`)
-            var msgArray = msg[0].split("/")
-            msgArray.shift()
-            var x = Math.floor((msg[1]*2000))
-            var y = Math.floor((msg[1]*2000) + 960)
-            console.log(x + " " + y)
+    // Source position select moveX
+    else if (msg[0] === "/movex"){
+        return obs.send("GetCurrentScene").then(data => {
+            console.log(`OSC IN: ${msg}`);
+            let msgArray = msg[0].split("/");  // FIXME: this doesn't do anything, nor the next line
+            msgArray.shift();
+            let x = Math.floor(msg[1]*2000);
+            let y = Math.floor((msg[1]*2000) + 960);
+            console.log(x + " " + y);
             obs.send("SetSceneItemProperties", {
-                'scene-name': data.name,
-                'item': currentSceneItem,
-                'position': { 'x': x + 540, 'alignment': 0}
+                "scene-name": data.name,
+                "item": currentSceneItem,  // FIXME: wtf this doesn't exist
+                "position": {"x": x + 540, "alignment": 0}
             }).catch(() => {
                 console.log(chalk.red("[!] Invalid position syntax"));
-            })
-        })
-        }
+            });
+        });
+    }
 
-        //Source Position Select MoveY
-        else if (msg[0] === '/movey'){
-            return obs.send("GetCurrentScene").then(data => {
-            console.log(`OSC IN: ${msg}`)
-            var msgArray = msg[0].split("/")
-            msgArray.shift()
-            var x = Math.floor((msg[2]*2000))
-            var y = Math.floor((msg[1]*2000) + 960)
-            console.log(x + " " + y)
+    // Source position select moveY
+    else if (msg[0] === "/movey") {
+        return obs.send("GetCurrentScene").then(data => {
+            console.log(`OSC IN: ${msg}`);
+            var msgArray = msg[0].split("/");  // FIXME: this doesn't do anything, nor the next line
+            msgArray.shift();
+            var x = Math.floor((msg[2]*2000));
+            var y = Math.floor((msg[1]*2000) + 960);
+            console.log(x + " " + y);
             obs.send("SetSceneItemProperties", {
-                'scene-name': data.name,
-                'item': currentSceneItem,
-                'position': { 'y': y, 'alignment': 0}
+                "scene-name": data.name,
+                "item": currentSceneItem,  // FIXME: wtf this doesn't exist
+                "position": {"y": y, "alignment": 0}
             }).catch(() => {
                 console.log(chalk.red("[!] Invalid position syntax"));
-            })
-        })
-        }
+            });
+        });
+    }
 
-        
     //Source Align
     else if (msg[0] === '/align'){
         return obs.send("GetCurrentScene").then(data => {
