@@ -147,7 +147,7 @@ server.on("message", (msg) => {
         });
     }
 
-      
+
     // Triggers to "GO" to the next scene
     else if (msg[0] === "/go") {
         return obs.send("GetSceneList").then(data => {
@@ -171,7 +171,7 @@ server.on("message", (msg) => {
             });
         });
     }
-    
+
     // Triggers previous scene to go "BACK"
     else if (msg[0] === "/back") {
         return obs.send("GetSceneList").then(data => {
