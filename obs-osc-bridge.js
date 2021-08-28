@@ -333,7 +333,7 @@ server.on("message", (msg) => {
             obs.send("SetCurrentTransition", {
                 "transition-name": msg[1].toString(),
             }).catch(() => {
-                console.log("Whoops");  // TODO: make this error more helpful
+                console.log(chalk.red(`[!] Transition '${msg[1].toString()}' does not exist`));
             });
         } else if (msg[1] === "Fade" || msg[1] === "Move" || msg[1] === "Luma_Wipe" || msg[1] === "Fade_to_Color" || msg[1] === "Slide" || msg[1] === "Swipe") {
             if (msg[2] === undefined) {
