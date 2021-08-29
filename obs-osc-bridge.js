@@ -32,20 +32,15 @@ obs.connect({
     password: obsPassword,
 }).then(() => {
     console.log(`[+] Connected to OBS websocket OK (${obsIp}:${obsPort})`);
-    return obs.send("GetSceneList");
+    return obs.send("GetVersion");
 }).then(data => {
-    // Pull current screen transition
-    obs.send("GetCurrentTransition").then(data => {
-        lastTransition = data.name;
-        console.log(`[+] Cached current transition: "${data.name}"`);
-    });
-    // Log total scenes
-    console.log(`\n${data.scenes.length} Available scenes:`);
-    data.scenes.forEach((thing, index) => {
-        console.log("    " + (index + 1) + " - " + thing.name);
-    });
-    // Log OSC scene syntax
-    console.log("\n-- Use '/scene [index]' for OSC control --\n");
+    console.log(`\nOBS Version: ${data.obsStudioVersion}`);
+    console.log(`OBS Websocket Version: ${data.obsWebsocketVersion}\n`);
+    return obs.send("GetCurrentTransition");
+}).then(data => {
+    // Cache current screen transition
+    lastTransition = data.name;
+    console.log(`[+] Cached current transition: "${data.name}"`);
 }).catch(err => {
     console.log(err);
     console.log(chalk.red("[!] Make sure OBS is running and websocket IP/port/password are correct!"));
