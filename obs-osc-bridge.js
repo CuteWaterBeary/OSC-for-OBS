@@ -69,12 +69,18 @@ server.on("listening", () => {
 
 // OSC -> OBS
 server.on("message", (msg) => {
+    console.log(chalk.blue("OSC IN: " + JSON.stringify(msg)));
+
+    if (msg[0] === "/ping") {
+        console.log(chalk.green("[+] Ping received"));
+    }
+
     /*
      * SCENE (transition to immediately)
      */
 
     // Trigger scene by index number
-    if (msg[0] === "/scene" && typeof msg[1] === "number") {
+    else if (msg[0] === "/scene" && typeof msg[1] === "number" && msg.length === 2) {
         let oscMessage = msg[1] - 1;  // Convert index number to start at 1
         oscMessage = Math.floor(oscMessage);  // Converts any float argument to lowest integer
         return obs.send("GetSceneList").then(data => {
