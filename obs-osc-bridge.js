@@ -165,24 +165,19 @@ server.on("message", (msg) => {
     }
 
     // Triggers previous scene to go "BACK"
-    else if (msg[0] === "/back") {
+    else if (msg[0] === "/back" && msg.length === 1) {
         return obs.send("GetSceneList").then(data => {
-            let cleanArray = [];
-            let rawSceneList = data;
-            data.scenes.forEach(element => { cleanArray.push(element.name); });
-            return obs.send("GetCurrentScene").then(data => {
-                let currentSceneIndex = cleanArray.indexOf(data.name);
-                if (currentSceneIndex - 1 <= -1) {
-                    obs.send("SetCurrentScene", {
-                        "scene-name": rawSceneList.scenes[rawSceneList.scenes.length - 1].name,
-                    });
-                } else {
-                    obs.send("SetCurrentScene", {
-                        "scene-name": rawSceneList.scenes[currentSceneIndex - 1].name,
-                    });
-                }
-            }).catch(() => {
-                console.log(chalk.red("[!] Invalid OSC message"));
+            let scenes = data.scenes.map(e => e.name);
+            let currentIndex = scenes.indexOf(data.currentScene);
+            let prevScene;
+            if (currentIndex === 0) {
+                prevScene = scenes[scenes.length - 1];
+            } else {
+                prevScene = scenes[currentIndex - 1];
+            }
+            console.log(`> SetCurrentScene: '${prevScene}'`);
+            obs.send("SetCurrentScene", {
+                "scene-name": prevScene,
             });
         });
     }
