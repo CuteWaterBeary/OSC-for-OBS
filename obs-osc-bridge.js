@@ -69,7 +69,7 @@ server.on("listening", () => {
 
 // OSC -> OBS
 server.on("message", (msg) => {
-    console.log(chalk.blue("OSC IN: " + JSON.stringify(msg)));
+    console.log(chalk.blue("OSC IN:"), msg);
 
     if (msg[0] === "/ping") {
         console.log(chalk.green("[+] Ping received"));
