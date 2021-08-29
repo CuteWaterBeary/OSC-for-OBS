@@ -94,7 +94,7 @@ server.on("message", (msg) => {
         });
     }
 
-    // Trigger scene if argument is a string
+    // Trigger scene if argument is a string (no spaces)
     else if (msg[0] === "/scene" && typeof msg[1] === "string" && msg.length === 2) {
         let sceneName = msg[1];
         return obs.send("GetSceneList").then(data => {
@@ -132,20 +132,19 @@ server.on("message", (msg) => {
     }
 
     /*
-     * PREVIEW SCENE
+     * PREVIEW SCENE (when using studio mode)
      */
 
     // Preview scene with scene name as argument (no spaces)
-    else if (msg[0] === "/previewScene" && typeof msg[1] === "string") {
+    else if (msg[0] === "/previewScene" && typeof msg[1] === "string" && msg.length === 2) {
         let sceneName = msg[1];
-        console.log(`OSC IN: ${msg[0]} ${sceneName}`);
+        console.log(`> SetPreviewScene: '${sceneName}'`);
         obs.send("SetPreviewScene", {
             "scene-name": sceneName,
         }).catch(() => {
             console.log(chalk.red(`[!] Failed to set preview scene ${sceneName}. Is studio mode enabled?`));
         });
     }
-
 
     // Triggers to "GO" to the next scene
     else if (msg[0] === "/go") {
