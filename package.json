@@ -6,7 +6,7 @@
     "start": "node obs-osc-bridge.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "Joe Shea",
+  "author": "Jamie Scott",
   "license": "ISC",
   "description": "",
   "dependencies": {
