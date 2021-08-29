@@ -81,46 +81,35 @@ server.on("message", (msg) => {
 
     // Trigger scene by index number
     else if (msg[0] === "/scene" && typeof msg[1] === "number" && msg.length === 2) {
-        let oscMessage = msg[1] - 1;  // Convert index number to start at 1
-        oscMessage = Math.floor(oscMessage);  // Converts any float argument to lowest integer
+        let index = msg[1] - 1;  // Convert index number to start at 1
+        index = Math.floor(index);  // Converts any float argument to lowest integer
         return obs.send("GetSceneList").then(data => {
-            console.log(`OSC IN: ${msg[0]} ${oscMessage + 1} (${data.scenes[oscMessage].name})`);
+            if (index > data.scenes.length - 1) throw new Error("Out of '/scene' range");
+            console.log(`> SetCurrentScene: '${data.scenes[index].name}'`);
             obs.send("SetCurrentScene", {
-                "scene-name": data.scenes[oscMessage].name,
-            });
-        }).catch(() => {
-            console.log("Error: Out of '/scene' range");
-        });
-    }
-
-    // Trigger scene if argument is a string and contains a space
-    else if (msg[0] === "/scene" && msg.length > 2) {
-        let firstIndex = msg.shift();
-        let oscMultiArg = msg.join(" ");
-        return obs.send("GetSceneList").then(data => {
-            console.log(`OSC IN: ${firstIndex} ${oscMultiArg}`);
-            obs.send("SetCurrentScene", {
-                "scene-name": oscMultiArg,
-            }).catch(() => {
-                console.log(chalk.red(`[!] There is no scene '${oscMultiArg}' in OBS. Double check case sensitivity.`));
+                "scene-name": data.scenes[index].name,
             });
         }).catch((err) => {
-            console.log(err);
+            console.log(chalk.red(`[!] ${err}`));
         });
     }
 
     // Trigger scene if argument is a string
-    else if (msg[0] === "/scene" && typeof msg[1] === "string") {
-        let oscMessage = msg[1];
+    else if (msg[0] === "/scene" && typeof msg[1] === "string" && msg.length === 2) {
+        let sceneName = msg[1];
         return obs.send("GetSceneList").then(data => {
-            console.log(`OSC IN: ${msg[0]} ${oscMessage}`);
+            console.log(`> SetCurrentScene: '${sceneName}'`);
             obs.send("SetCurrentScene", {
-                "scene-name": oscMessage,
-            }).catch(() => {
-                console.log(chalk.red(`[!] There is no scene '${msg[1]}' in OBS. Double check case sensitivity.`));
+                "scene-name": sceneName,
+            }).catch((err) => {
+                if (err.error === "requested scene does not exist") {
+                    console.log(chalk.red(`[!] There is no scene '${msg[1]}' in OBS. Double check case sensitivity.`));
+                } else {
+                    console.log(chalk.red(`[!] ${err.error}`));
+                }
             });
         }).catch((err) => {
-            console.log(err);
+            console.log(chalk.red(`[!] ${err}`));
         });
     }
 
@@ -129,12 +118,16 @@ server.on("message", (msg) => {
         let msgArray = msg[0].split("/");
         msgArray.shift();
         msgArray.shift();
+        let sceneName = msgArray.join("/");
+        console.log(`> SetCurrentScene: '${sceneName}'`);
         obs.send("SetCurrentScene", {
-            "scene-name": msgArray[0].split("_").join(" ").toString(),  // TODO get rid of confusing replace and just disallow spaces in scene names
-        }).catch(() => {
-            console.log(chalk.red(`[!] There is no scene "${msgArray}" in OBS. Double check case sensitivity.`));
+            "scene-name": sceneName,
         }).catch((err) => {
-            console.log(err);
+            if (err.error === "requested scene does not exist") {
+                console.log(chalk.red(`[!] There is no scene '${sceneName}' in OBS. Double check case sensitivity.`));
+            } else {
+                console.log(chalk.red(`[!] ${err.error}`));
+            }
         });
     }
 
