@@ -147,25 +147,19 @@ server.on("message", (msg) => {
     }
 
     // Triggers to "GO" to the next scene
-    else if (msg[0] === "/go") {
+    else if (msg[0] === "/go" && msg.length === 1) {
         return obs.send("GetSceneList").then(data => {
-            let cleanArray = [];
-            let rawSceneList = data;
-            data.scenes.forEach(element => { cleanArray.push(element.name); });
-            return obs.send("GetCurrentScene").then(data => {
-                let currentSceneIndex = cleanArray.indexOf(data.name);
-                // TODO: I think this if is for wrap-around from last scene to first, need to check this and comment as applicable
-                if (currentSceneIndex + 1 >= rawSceneList.scenes.length) {
-                    obs.send("SetCurrentScene", {
-                        "scene-name": rawSceneList.scenes[0].name,
-                    });
-                } else {
-                    obs.send("SetCurrentScene", {
-                        "scene-name": rawSceneList.scenes[currentSceneIndex + 1].name,
-                    });
-                }
-            }).catch(() => {
-                console.log(chalk.red("[!] Invalid OSC message"));
+            let scenes = data.scenes.map(e => e.name);
+            let currentIndex = scenes.indexOf(data.currentScene);
+            let nextScene;
+            if (currentIndex === scenes.length - 1) {
+                nextScene = scenes[0];
+            } else {
+                nextScene = scenes[currentIndex + 1];
+            }
+            console.log(`> SetCurrentScene: '${nextScene}'`);
+            obs.send("SetCurrentScene", {
+                "scene-name": nextScene,
             });
         });
     }
