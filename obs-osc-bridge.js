@@ -131,21 +131,6 @@ server.on("message", (msg) => {
         });
     }
 
-    /*
-     * PREVIEW SCENE (when using studio mode)
-     */
-
-    // Preview scene with scene name as argument (no spaces)
-    else if (msg[0] === "/previewScene" && typeof msg[1] === "string" && msg.length === 2) {
-        let sceneName = msg[1];
-        console.log(`> SetPreviewScene: '${sceneName}'`);
-        obs.send("SetPreviewScene", {
-            "scene-name": sceneName,
-        }).catch(() => {
-            console.log(chalk.red(`[!] Failed to set preview scene ${sceneName}. Is studio mode enabled?`));
-        });
-    }
-
     // Triggers to "GO" to the next scene
     else if (msg[0] === "/go" && msg.length === 1) {
         return obs.send("GetSceneList").then(data => {
@@ -179,6 +164,25 @@ server.on("message", (msg) => {
             obs.send("SetCurrentScene", {
                 "scene-name": prevScene,
             });
+        });
+    }
+
+    /*
+     * PREVIEW SCENE (when using studio mode)
+     */
+
+    // Preview scene with scene name as argument (no spaces)
+    else if (msg[0] === "/previewScene" && typeof msg[1] === "string" && msg.length === 2) {
+        let sceneName = msg[1];
+        console.log(`> SetPreviewScene: '${sceneName}'`);
+        obs.send("SetPreviewScene", {
+            "scene-name": sceneName,
+        }).catch((err) => {
+            if (err.error === "studio mode not enabled") {
+                console.log(chalk.red("[!] Failed to set preview scene, studio mode is not enabled"));
+            } else {
+                console.log(chalk.red(`[!] ${err.error}`));
+            }
         });
     }
 
