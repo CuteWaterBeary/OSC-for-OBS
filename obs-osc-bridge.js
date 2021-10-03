@@ -179,6 +179,7 @@ server.on("message", (msg) => {
 
     // Triggers start recording
     else if (msg[0] === "/startRecording") {
+        console.log("> StartRecording");
         obs.send("StartRecording").catch((err) => {
             console.log(chalk.red(`[!] ${err.error}`));
         });
@@ -186,6 +187,7 @@ server.on("message", (msg) => {
 
     // Triggers stop recording
     else if (msg[0] === "/stopRecording") {
+        console.log("> StopRecording");
         obs.send("StopRecording").catch((err) => {
             console.log(chalk.red(`[!] ${err.error}`));
         });
@@ -193,6 +195,7 @@ server.on("message", (msg) => {
 
     // Triggers toggle recording
     else if (msg[0] === "/toggleRecording") {
+        console.log("> StartStopRecording");
         obs.send("StartStopRecording").catch((err) => {
             console.log(chalk.red(`[!] ${err.error}`));
         });
@@ -200,6 +203,7 @@ server.on("message", (msg) => {
 
     // Triggers start streaming
     else if (msg[0] === "/startStreaming") {
+        console.log("> StartStreaming");
         obs.send("StartStreaming").catch((err) => {
             console.log(chalk.red(`[!] ${err.error}`));
         });
@@ -207,6 +211,7 @@ server.on("message", (msg) => {
 
     // Triggers stop streaming
     else if (msg[0] === "/stopStreaming") {
+        console.log("> StopStreaming");
         obs.send("StopStreaming").catch((err) => {
             console.log(chalk.red(`[!] ${err.error}`));
         });
@@ -214,6 +219,7 @@ server.on("message", (msg) => {
 
     // Triggers toggle streaming
     else if (msg[0] === "/toggleStreaming") {
+        console.log("> StartStopStreaming");
         obs.send("StartStopStreaming").catch((err) => {
             console.log(chalk.red(`[!] ${err.error}`));
         });
@@ -221,6 +227,7 @@ server.on("message", (msg) => {
 
     // Triggers pause recording
     else if (msg[0] === "/pauseRecording") {
+        console.log("> PauseRecording");
         obs.send("PauseRecording").catch((err) => {
             console.log(chalk.red(`[!] ${err.error}`));
         });
@@ -228,6 +235,7 @@ server.on("message", (msg) => {
 
     // Triggers resume recording
     else if (msg[0] === "/resumeRecording"){
+        console.log("> ResumeRecording");
         obs.send("ResumeRecording").catch((err) => {
             console.log(chalk.red(`[!] ${err.error}`));
         });
@@ -235,6 +243,7 @@ server.on("message", (msg) => {
 
     // Triggers enable studio mode
     else if (msg[0] === "/enableStudioMode") {
+        console.log("> EnableStudioMode");
         obs.send("EnableStudioMode").catch((err) => {
             console.log(chalk.red(`[!] ${err.error}`));
         });
@@ -242,6 +251,7 @@ server.on("message", (msg) => {
 
     // Triggers disable studio mode
     else if (msg[0] === "/disableStudioMode") {
+        console.log("> DisableStudioMode");
         obs.send("DisableStudioMode").catch((err) => {
             console.log(chalk.red(`[!] ${err.error}`));
         });
@@ -249,6 +259,7 @@ server.on("message", (msg) => {
 
     // Triggers toggle studio mode
     else if (msg[0] === "/toggleStudioMode") {
+        console.log("> ToggleStudioMode");
         obs.send("ToggleStudioMode").catch((err) => {
             console.log(chalk.red(`[!] ${err.error}`));
         });
