@@ -266,22 +266,24 @@ server.on("message", (msg) => {
     }
 
     // Triggers source visibility on/off
-    else if (msg[0].includes("visible")) {
-        console.log(`OSC IN: ${msg}`);
-        let msgArray = msg[0].split("/");
-        msgArray.shift();
+    // /scene/[scene-name]/[source-name]/visible [0|1]
+    else if (msgArray.length === 5 && msgArray[1] === "scene" && msgArray[4] === "visible" && msg.length === 2) {
         let visible;
         if (msg[1] === 0 || msg[1] === "off") {
             visible = false;
         } else if (msg[1] === 1 || msg[1] === "on") {
             visible = true;
+        } else {
+            console.log(chalk.red("[!] Invalid syntax. Visibility must be [0|1|off|on]."));
+            return
         }
+        console.log(`> SetSceneItemProperties: '${msgArray[2]}' '${msgArray[3]}' ${visible}`)
         obs.send("SetSceneItemProperties", {
-            "scene-name": msgArray[0],
-            "item": msgArray[1],
+            "scene-name": msgArray[2],
+            "item": msgArray[3],
             "visible": visible,
         }).catch(() => {
-            console.log(chalk.red("[!] Invalid syntax. Make sure there are NO SPACES in scene name and source name. /[sceneName]/[sourceName]/visible 0 or 1, e.g.: /Wide/VOX/visible 1"));
+            console.log(chalk.red("[!] Invalid syntax. Make sure there are no spaces in scene/source name."));
         });
     }
 
