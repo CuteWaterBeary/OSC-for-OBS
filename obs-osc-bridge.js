@@ -65,6 +65,11 @@ server.on("listening", () => {
 // OSC -> OBS
 server.on("message", (msg) => {
     console.log(chalk.blue("OSC IN:"), msg);
+    if (msg.length < 1) {
+        return;
+    }
+    let msgArray = msg[0].split("/");
+    console.log(chalk.grey("msgArray:"), msgArray);
 
     if (msg[0] === "/ping") {
         console.log(chalk.green("[+] Ping received"));
@@ -266,7 +271,7 @@ server.on("message", (msg) => {
     }
 
     // Triggers source visibility on/off
-    // /scene/[scene-name]/[source-name]/visible [0|1]
+    // /scene/[scene-name]/[source-name]/visible [0|1|off|on]
     else if (msgArray.length === 5 && msgArray[1] === "scene" && msgArray[4] === "visible" && msg.length === 2) {
         let visible;
         if (msg[1] === 0 || msg[1] === "off") {
@@ -275,15 +280,15 @@ server.on("message", (msg) => {
             visible = true;
         } else {
             console.log(chalk.red("[!] Invalid syntax. Visibility must be [0|1|off|on]."));
-            return
+            return;
         }
-        console.log(`> SetSceneItemProperties: '${msgArray[2]}' '${msgArray[3]}' ${visible}`)
+        console.log(`> SetSceneItemProperties: '${msgArray[2]}' '${msgArray[3]}' ${visible}`);
         obs.send("SetSceneItemProperties", {
             "scene-name": msgArray[2],
             "item": msgArray[3],
             "visible": visible,
-        }).catch(() => {
-            console.log(chalk.red("[!] Invalid syntax. Make sure there are no spaces in scene/source name."));
+        }).catch((err) => {
+            console.log(chalk.red(`[!] ${err.error}`));
         });
     }
 
