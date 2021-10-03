@@ -80,6 +80,7 @@ server.on("message", (msg) => {
      */
 
     // Trigger scene by index number
+    // /scene [index]
     else if (msg[0] === "/scene" && typeof msg[1] === "number" && msg.length === 2) {
         let index = msg[1] - 1;  // Convert index number to start at 1
         index = Math.floor(index);  // Converts any float argument to lowest integer
@@ -95,6 +96,7 @@ server.on("message", (msg) => {
     }
 
     // Trigger scene if argument is a string (no spaces)
+    // /scene [scene-name]
     else if (msg[0] === "/scene" && typeof msg[1] === "string" && msg.length === 2) {
         let sceneName = msg[1];
         console.log(`> SetCurrentScene: '${sceneName}'`);
@@ -110,17 +112,14 @@ server.on("message", (msg) => {
     }
 
     // Trigger scene if scene name is in the OSC string
-    else if (msg[0].includes("/scene") && msg.length === 1) {
-        let msgArray = msg[0].split("/");
-        msgArray.shift();
-        msgArray.shift();
-        let sceneName = msgArray.join("/");
-        console.log(`> SetCurrentScene: '${sceneName}'`);
+    // /scene/[scene-name]
+    else if (msgArray.length === 3 && msgArray[1] === "scene" && msg.length === 1) {
+        console.log(`> SetCurrentScene: '${msgArray[2]}'`);
         obs.send("SetCurrentScene", {
-            "scene-name": sceneName,
+            "scene-name": msgArray[2],
         }).catch((err) => {
             if (err.error === "requested scene does not exist") {
-                console.log(chalk.red(`[!] There is no scene '${sceneName}' in OBS. Double check case sensitivity.`));
+                console.log(chalk.red(`[!] There is no scene '${msgArray[2]}' in OBS. Double check case sensitivity.`));
             } else {
                 console.log(chalk.red(`[!] ${err.error}`));
             }
