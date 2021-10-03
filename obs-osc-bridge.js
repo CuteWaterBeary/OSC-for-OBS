@@ -71,7 +71,7 @@ server.on("message", (msg) => {
     }
 
     /*
-     * SCENE (transition to immediately)
+     * SCENES (transition to immediately)
      */
 
     // Trigger scene by index number
@@ -92,19 +92,15 @@ server.on("message", (msg) => {
     // Trigger scene if argument is a string (no spaces)
     else if (msg[0] === "/scene" && typeof msg[1] === "string" && msg.length === 2) {
         let sceneName = msg[1];
-        return obs.send("GetSceneList").then(data => {
-            console.log(`> SetCurrentScene: '${sceneName}'`);
-            obs.send("SetCurrentScene", {
-                "scene-name": sceneName,
-            }).catch((err) => {
-                if (err.error === "requested scene does not exist") {
-                    console.log(chalk.red(`[!] There is no scene '${msg[1]}' in OBS. Double check case sensitivity.`));
-                } else {
-                    console.log(chalk.red(`[!] ${err.error}`));
-                }
-            });
+        console.log(`> SetCurrentScene: '${sceneName}'`);
+        obs.send("SetCurrentScene", {
+            "scene-name": sceneName,
         }).catch((err) => {
-            console.log(chalk.red(`[!] ${err}`));
+            if (err.error === "requested scene does not exist") {
+                console.log(chalk.red(`[!] There is no scene '${msg[1]}' in OBS. Double check case sensitivity.`));
+            } else {
+                console.log(chalk.red(`[!] ${err.error}`));
+            }
         });
     }
 
@@ -163,7 +159,7 @@ server.on("message", (msg) => {
     }
 
     /*
-     * PREVIEW SCENE (when using studio mode)
+     * PREVIEW SCENES (when using studio mode)
      */
 
     // Preview scene with scene name as argument (no spaces)
