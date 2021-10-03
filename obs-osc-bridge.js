@@ -295,22 +295,24 @@ server.on("message", (msg) => {
     }
 
     // Triggers filter visibility on/off
-    else if (msg[0].includes("filterVisibility")) {
-        console.log(`OSC IN: ${msg}`);
-        let msgArray = msg[0].split("/");
-        msgArray.shift();
-        let visiblef;
+    // /source/[source-name]/filter/[filter-name] [0|1|off|on]
+    else if (msgArray.length === 5 && msgArray[1] === "source" && msgArray[3] === "filter" && msg.length === 2) {
+        let visible;
         if (msg[1] === 0 || msg[1] === "off") {
-            visiblef = false;
+            visible = false;
         } else if (msg[1] === 1 || msg[1] === "on") {
-            visiblef = true;
+            visible = true;
+        } else {
+            console.log(chalk.red("[!] Invalid syntax. Filter must be [0|1|off|on]."));
+            return;
         }
+        console.log(`> SetSourceFilterVisibility: '${msgArray[2]}' '${msgArray[4]}' ${visible}`);
         obs.send("SetSourceFilterVisibility", {
-            "sourceName": msgArray[0].split("_").join(" "),
-            "filterName": msgArray[1].split("_").join(" "),
-            "filterEnabled": visiblef,
-        }).catch(() => {
-            console.log(chalk.red("[!] Invalid syntax. Make sure there are NO SPACES in source name and filter name. /[sourceName]/[filterName]/filterVisibility 0 or 1, e.g.: /VOX/chroma/filterVisibility 1"));
+            "sourceName": msgArray[2],
+            "filterName": msgArray[4],
+            "filterEnabled": visible,
+        }).catch((err) => {
+            console.log(chalk.red(`[!] ${err.error}`));
         });
     } 
 
