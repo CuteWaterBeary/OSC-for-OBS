@@ -1,4 +1,8 @@
 # OSC for OBS
+
+## Code is gone from the repo now, but it is still available in earlier commits.
+
+
 #### Control and listen to [OBS](https://obsproject.com/) via OSC protocol
 
 ![OSCforOBS copySmall](https://user-images.githubusercontent.com/70780576/109406368-3c793e00-792d-11eb-90f0-bca884b79e80.png)
