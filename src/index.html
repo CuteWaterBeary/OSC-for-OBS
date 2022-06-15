@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electron test</title>
+</head>
+<body>
+    <h1>OwO What's this?</h1>
+    <p>A line of meaningless paragraph here</p>
+    <div>
+        We are using Node.js <span id="node-version"></span>,
+        Chromium <span id="chrome-version"></span>,
+        and Electron <span id="electron-version"></span>.
+    </div>
+    <div>
+        <input type="text" name="title-text" id="title-text">
+        <button id="title-button">Don't push me</button>
+    </div>
+    <div>
+        <button id="file-button">Open a file</button>
+        File path: <span id="file-path"></span>
+    </div>
+    <div>
+        Counter value: <span id="counter">0</span>
+    </div>
+    <script src="renderer.js"></script>
+</body>
+</html>
