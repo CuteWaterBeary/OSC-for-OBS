@@ -1,7 +1,11 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron')
+const { open } = require('fs/promises')
 const path = require('path')
+// const {}
 
+const configPath = path.join(__dirname, 'config.json')
 let autoConnect
+let configJson
 
 function saveAsFile() {
     console.info('saveAsFile triggered')
@@ -27,10 +31,56 @@ function listSceneItems() {
     console.info('listSceneItems triggered')
 }
 
+async function loadConfig() {
+    let fileHandle
+    let configString
+    try {
+        fileHandle = await open(configPath, 'r')
+        configString = await fileHandle.readFile('utf-8')
+        try {
+            configJson = JSON.parse(configString)
+        } catch (e) {
+            console.error(e)
+            configJson = JSON.parse('{}')
+        }
+
+        if (configJson.a != null) {
+            configJson.a += 1
+            console.info('a do exist')
+        } else {
+            configJson.a = 0
+            console.info('a do not exist')
+        }
+        
+        configString = JSON.stringify(configJson)
+        await fileHandle.truncate(0) // Wipe previous config
+        await fileHandle.write(configString, 0)
+    } catch (e) {
+        console.error(e.message)
+    } finally {
+        await fileHandle?.close()
+    }
+}
+
+async function saveConfig() {
+    let fileHandle
+    let configString
+    try {
+        fileHandle = await open(configPath, 'r+')
+        configString = JSON.stringify(configJson)
+        await fileHandle.truncate(0) // Wipe previous config
+        await fileHandle.write(configString, 0)
+    } catch (e) {
+        console.error(e.message)
+    } finally {
+        await fileHandle?.close()
+    }
+}
+
 function createWindow() {
     const mainWindow = new BrowserWindow({
         width: 800,
-        height: 600,
+        height: 800,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: false,
@@ -165,6 +215,10 @@ function createWindow() {
                     accelerator: 'CommandOrControl+2',
                     click: () => listSceneItems()
                 },
+                {
+                    label: 'Test script',
+                    click: async () => loadConfig()
+                }
             ]
         },
     ]
