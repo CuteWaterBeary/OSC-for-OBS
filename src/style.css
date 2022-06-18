@@ -1,0 +1,119 @@
+:root {
+    --theme-color: rgb(237, 255, 163);
+    /* --theme-color: rgb(239, 255, 176); */
+    --switch-height: 20px;
+    --switch-width: calc(var(--switch-height) * 5 / 3);
+}
+
+body {
+    width: 240px;
+    margin: auto;
+    padding: 50px 30px 0 30px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: white;
+    background-color: rgb(20, 20, 20);
+}
+
+.network-config {
+    display: grid;
+    grid-template-columns: 10ch auto;
+    grid-template-rows: auto auto auto auto;
+}
+
+.config-name {
+    font-size: 20px;
+    color: var(--theme-color);
+    grid-row: 1;
+    grid-column: 1 / -1;
+    padding-left: 0;
+    padding-block-start: 10px;
+    padding-block-end: 10px;
+}
+
+.network-config label {
+    grid-column: 1;
+}
+
+.network-config input {
+    grid-column: 2;
+}
+
+#connect-button {
+    background-color: var(--theme-color);
+    border-radius: 4px;
+    border: none;
+    color: black;
+    text-align: center;
+    font-size: 15px;
+    width: 100%;
+    height: 50px;
+    cursor: pointer;
+    margin: 15px 0 15px 0;
+}
+
+.misc-config {
+    display: flex;
+    flex-direction: column;
+    padding: 5px 0 5px 0;
+}
+
+.misc-config > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding-block-end: 5px;
+}
+
+.misc-config > div:last-child {
+    padding-block-end: 0;
+}
+
+.switch-config {
+    align-items: center !important;
+    cursor: default;
+}
+
+.switch-config p {
+    margin: 0;
+}
+
+.disabled {
+    opacity: 0.4;
+}
+
+/* iOS-style switch */
+.switch {
+    margin: 0;
+    width: var(--switch-width);
+    height: var(--switch-height);
+    border-radius: calc(var(--switch-height) / 2);
+    border: none;
+    background-color: gray;
+    cursor: pointer;
+    text-align: center;
+
+    transition: background-color 0.3s;
+}
+
+.switch[value='1'] {
+    background-color: rgb(78, 209, 100);
+}
+
+/* White thingy in the switch */
+.switch::before {
+    content: "";
+    display: block;
+    position: relative;
+    left: calc(var(--switch-height) * 0.05);
+    top: calc(var(--switch-height) * 0.05);
+    width: calc(var(--switch-height) * 0.90);
+    height: calc(var(--switch-height) * 0.90);
+    border-radius: 50%;
+    background-color: white;
+
+    transition: left 0.3s;
+}
+
+.switch[value='1']::before {
+    left: calc(var(--switch-width) - var(--switch-height) * 0.95);
+}

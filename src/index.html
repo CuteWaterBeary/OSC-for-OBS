@@ -1,30 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
     <title>Electron test</title>
 </head>
+
 <body>
-    <h1>OwO What's this?</h1>
-    <p>A line of meaningless paragraph here</p>
-    <div>
-        We are using Node.js <span id="node-version"></span>,
-        Chromium <span id="chrome-version"></span>,
-        and Electron <span id="electron-version"></span>.
-    </div>
-    <div>
-        <input type="text" name="title-text" id="title-text">
-        <button id="title-button">Don't push me</button>
-    </div>
-    <div>
-        <button id="file-button">Open a file</button>
-        File path: <span id="file-path"></span>
-    </div>
-    <div>
-        Counter value: <span id="counter">0</span>
+    <img id="image" src="extraResources/icon.png" width="150">
+    <div class="config">
+        <div class="network-config">
+            <legend class="config-name">OBS Websocket</legend>
+            <label for="obsip">IP</label>
+            <input type="text" id="obsip" value="" size="10">
+            <label for="obsport">Port</label>
+            <input type="text" id="obsport" value="" size="5">
+            <label for="obspassword">Password:</label>
+            <input type="password" id="obspassword" value="" size="5">
+        </div>
+        <hr>
+        <div class="network-config">
+            <legend class="config-name">OSC IN</legend>
+            <label for="oscinip">IP</label>
+            <input type="text" id="oscinip" value="" size="10">
+            <label for="oscinport">Port</label>
+            <input type="text" id="oscinport" value="" size="5">
+        </div>
+        <hr>
+        <div class="network-config">
+            <legend class="config-name">OSC OUT</legend>
+            <label for="oscoutip">IP</label>
+            <input type="text" id="oscoutip" value="" size="10">
+            <label for="oscoutport">Port</label>
+            <input type="text" id="oscoutport" value="" size="5">
+        </div>
+        <hr>
+        <div class="misc-config">
+            <div class="switch-config" title="Notify OSC client when active scene changes">
+                Notify OBS Active Scene
+                <div class="switch" switch-action="testButton" value="0"></div>
+            </div>
+        </div>
+        <div class="misc-config disabled" id="scene-feedback">
+            <div class="switch-config" title="Set custom path for feedback">
+                TouchOSC Feedback
+                <div class="switch" switch-action="testButton2" value="0"></div>
+            </div>
+            <div id="scene-feedback-path" title="Custom OSC path for feedback, fill in before enable it">
+                /
+                <input type="text" id="oscoutprepend" value="" size="4">
+                /[SceneName]/
+                <input type="text" id="oscoutpostpend" value="" size="4">
+            </div>
+        </div>
+        <!-- <input class="button" id="submit" type="submit" value="Connect"> -->
+        <button id="connect-button">Connect</button>
     </div>
     <script src="renderer.js"></script>
+    <script src="switch.js"></script>
 </body>
+
 </html>
