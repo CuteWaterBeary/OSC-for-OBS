@@ -1,11 +1,11 @@
 :root {
-    --theme-color: rgb(237, 255, 163);
-    /* --theme-color: rgb(239, 255, 176); */
+    --theme-color: rgb(239, 255, 176);
     --switch-height: 20px;
     --switch-width: calc(var(--switch-height) * 5 / 3);
 }
 
 body {
+    user-select: none;
     width: 240px;
     margin: auto;
     padding: 50px 30px 0 30px;
@@ -57,14 +57,14 @@ body {
     padding: 5px 0 5px 0;
 }
 
-.misc-config > div {
+.misc-config>div {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     padding-block-end: 5px;
 }
 
-.misc-config > div:last-child {
+.misc-config>div:last-child {
     padding-block-end: 0;
 }
 
