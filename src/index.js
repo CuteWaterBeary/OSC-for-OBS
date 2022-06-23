@@ -1,11 +1,13 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron')
+const OBSWebSocket = require('obs-websocket-js')
+
 const { open } = require('fs/promises')
 const path = require('path')
-// const {}
 
 const configPath = path.join(__dirname, 'config.json')
 let autoConnect
-let configJson
+let configJson = null
+let obs
 
 function saveAsFile() {
     console.info('saveAsFile triggered')
@@ -31,6 +33,67 @@ function listSceneItems() {
     console.info('listSceneItems triggered')
 }
 
+async function connectOBS(_event, ip, port, password) {
+    console.info('Connecting OBSWebSocket...')
+    console.info(`ip: ${ip}, port: ${port}, password: ${password}`)
+    if (obs) {
+        console.error('OBSWebSocket already exist')
+        return { result: false, error: 'OBSWebSocket already exist' }
+    }
+
+    obs = new OBSWebSocket()
+    try {
+        const address = ip + ':' + port
+        await obs.connect({ address: address, password: password })
+    } catch (e) {
+        console.error('OBSWebSocket error:', e)
+        obs = null
+        return { result: false, error: e.error }
+    }
+
+    await updateOBSConfig(ip, port, password)
+    obs.on('error', err => {
+        console.error('socket error:', err)
+    })
+    console.info('Connecting OBSWebSocket...Succeeded')
+    return { result: true }
+}
+
+async function disconnectOBS() {
+    console.info('Disconnecting OBSWebSocket...')
+    if (obs == null) {
+        console.error('OBSWebSocket did not exist')
+        return { result: false, error: 'OBSWebSocket did not exist' }
+    }
+
+    try {
+        await obs.disconnect()
+    } catch (e) {
+        console.error('OBSWebSocket error:', e)
+        obs = null
+        return { result: false, error: e.error }
+    }
+
+    obs = null
+    console.info('Disconnecting OBSWebSocket...Succeeded')
+    return { result: true }
+}
+
+async function updateOBSConfig(ip, port, password) {
+    if (configJson == null) {
+        console.error('Config not initialized')
+        return
+    }
+
+    configJson.network.obsWebSocket = {
+        ip: ip.toString(),
+        port: port.toString(),
+        password: password.toString(),
+    }
+
+    await saveConfig()
+}
+
 async function loadConfig() {
     let fileHandle
     let configString
@@ -40,26 +103,19 @@ async function loadConfig() {
         try {
             configJson = JSON.parse(configString)
         } catch (e) {
-            console.error(e)
-            configJson = JSON.parse('{}')
+            console.error('Cannot parse config file, set a default one')
+            configJson = { network: {}, misc: {} }
         }
 
-        if (configJson.a != null) {
-            configJson.a += 1
-            console.info('a do exist')
-        } else {
-            configJson.a = 0
-            console.info('a do not exist')
-        }
-        
-        configString = JSON.stringify(configJson)
-        await fileHandle.truncate(0) // Wipe previous config
-        await fileHandle.write(configString, 0)
     } catch (e) {
-        console.error(e.message)
+        console.error('Error occurred when reading config', e.message)
     } finally {
         await fileHandle?.close()
     }
+}
+
+async function getConfig() {
+    return configJson
 }
 
 async function saveConfig() {
@@ -77,18 +133,7 @@ async function saveConfig() {
     }
 }
 
-function createWindow() {
-    const mainWindow = new BrowserWindow({
-        width: 800,
-        height: 800,
-        webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
-            nodeIntegration: false,
-            contextIsolation: true,
-            sandbox: true
-        }
-    })
-
+function setApplicationMenu() {
     const isMac = process.platform === 'darwin'
     const menuTemplate = [
         ...(isMac ? [{
@@ -225,11 +270,38 @@ function createWindow() {
 
     const menu = Menu.buildFromTemplate(menuTemplate)
     Menu.setApplicationMenu(menu)
-    mainWindow.loadFile(path.join(__dirname, 'index.html'))
-    mainWindow.webContents.openDevTools()
 }
 
-app.whenReady().then(() => {
+function createWindow() {
+    const mainWindow = new BrowserWindow({
+        width: 300,
+        height: 800,
+        minWidth: 300,
+        minHeight: 800,
+        useContentSize: true,
+        show: false,
+        webPreferences: {
+            preload: path.join(__dirname, 'preload.js'),
+            nodeIntegration: false,
+            contextIsolation: true,
+            sandbox: true
+        }
+    })
+
+    mainWindow.once('ready-to-show', () => {
+        mainWindow.show()
+        mainWindow.webContents.openDevTools()
+    })
+
+    setApplicationMenu()
+    mainWindow.loadFile(path.join(__dirname, 'index.html'))
+}
+
+app.whenReady().then(async () => {
+    await loadConfig()
+    ipcMain.handle('connect:obs', connectOBS)
+    ipcMain.handle('disconnect:obs', disconnectOBS)
+    ipcMain.handle('getConfig:obs', getConfig)
     createWindow()
 
     app.on('activate', () => {
