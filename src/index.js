@@ -5,9 +5,12 @@ const { open } = require('fs/promises')
 const path = require('path')
 
 const configPath = path.join(__dirname, 'config.json')
+const windowHeight = 700
 let autoConnect
 let configJson = null
 let obs
+let mainWindowId
+let devWindowId
 
 function saveAsFile() {
     console.info('saveAsFile triggered')
@@ -31,6 +34,18 @@ function qlabCue() {
 
 function listSceneItems() {
     console.info('listSceneItems triggered')
+}
+
+function toggleDevWindow() {
+    const devWindow = BrowserWindow.fromId(devWindowId)
+    const mainWindow = BrowserWindow.fromId(mainWindowId)
+
+    if (devWindow) {
+        mainWindow.removeAllListeners('move')
+        devWindow.close()
+    } else {
+        createDevWindow()
+    }
 }
 
 async function connectOBS(_event, ip, port, password) {
@@ -61,7 +76,7 @@ async function connectOBS(_event, ip, port, password) {
 
 async function disconnectOBS() {
     console.info('Disconnecting OBSWebSocket...')
-    if (obs == null) {
+    if (obs === null) {
         console.error('OBSWebSocket did not exist')
         return { result: false, error: 'OBSWebSocket did not exist' }
     }
@@ -80,7 +95,7 @@ async function disconnectOBS() {
 }
 
 async function updateOBSConfig(ip, port, password) {
-    if (configJson == null) {
+    if (configJson === null) {
         console.error('Config not initialized')
         return
     }
@@ -223,7 +238,11 @@ function setApplicationMenu() {
             submenu: [
                 { role: 'reload' },
                 { role: 'forceReload' },
-                { role: 'toggleDevTools' },
+                {
+                    label: 'Toggle Develepoer Tools',
+                    accelerator: 'CommandOrControl+Shift+I',
+                    click: () => toggleDevWindow()
+                },
                 { type: 'separator' },
                 { role: 'resetZoom' },
                 { role: 'zoomIn' },
@@ -274,10 +293,10 @@ function setApplicationMenu() {
 
 function createWindow() {
     const mainWindow = new BrowserWindow({
-        width: 300,
-        height: 800,
-        minWidth: 300,
-        minHeight: 800,
+        width: 320,
+        height: windowHeight,
+        maximizable: false,
+        fullscreenable: false,
         useContentSize: true,
         show: false,
         webPreferences: {
@@ -288,13 +307,53 @@ function createWindow() {
         }
     })
 
+    mainWindowId = mainWindow.id
+    setApplicationMenu()
     mainWindow.once('ready-to-show', () => {
         mainWindow.show()
-        mainWindow.webContents.openDevTools()
     })
 
-    setApplicationMenu()
     mainWindow.loadFile(path.join(__dirname, 'index.html'))
+    if (configJson.openDevToolsOnStart !== false) {
+        createDevWindow()
+    }
+}
+
+function createDevWindow() {
+    const devWindow = new BrowserWindow({
+        resizable: false,
+        width: 480,
+        height: windowHeight,
+        movable: false,
+        minimizable: false,
+        maximizable: false,
+        fullscreenable: false,
+        show: false
+    })
+    const mainWindow = BrowserWindow.fromId(mainWindowId)
+
+    if (mainWindow === null) {
+        console.error('Main window do not exist')
+        return
+    }
+
+    devWindow.setParentWindow(mainWindow)
+    devWindowId = devWindow.id
+    devWindow.removeMenu()
+    mainWindow.webContents.setDevToolsWebContents(devWindow.webContents)
+    mainWindow.webContents.openDevTools({ mode: 'detach' })
+    mainWindow.on('move', function () {
+        const windowBounds = mainWindow.getBounds()
+        const devWindow = BrowserWindow.fromId(devWindowId)
+        devWindow.setPosition(windowBounds.x + windowBounds.width, windowBounds.y)
+    })
+
+    devWindow.once('ready-to-show', () => {
+        const windowBounds = mainWindow.getBounds()
+        devWindow.setPosition(windowBounds.x + windowBounds.width, windowBounds.y)
+        devWindow.setSize(windowBounds.width * 1.5, windowBounds.height)
+        devWindow.show()
+    })
 }
 
 app.whenReady().then(async () => {
