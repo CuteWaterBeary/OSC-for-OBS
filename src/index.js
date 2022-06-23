@@ -1,14 +1,20 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron')
 const OBSWebSocket = require('obs-websocket-js')
+const { Client, Server } = require('node-osc')
 
 const { open } = require('fs/promises')
 const path = require('path')
 
 const configPath = path.join(__dirname, 'config.json')
 const windowHeight = 700
+
 let autoConnect
 let configJson = null
+
 let obs
+let oscIn
+let oscOut
+
 let mainWindowId
 let devWindowId
 
@@ -48,12 +54,54 @@ function toggleDevWindow() {
     }
 }
 
-async function connectOBS(_event, ip, port, password) {
+async function connectAll(_event, obsConfig, oscInConfig, oscOutConfig) {
+    await updateConfig(obsConfig, oscInConfig, oscOutConfig)
+    const obsResult = await connectOBS(obsConfig[0], obsConfig[1], obsConfig[2])
+    if (obsResult.result === false) {
+        return obsResult
+    }
+
+    const oscResult = await connectOSC(oscInConfig[0], oscInConfig[1], oscOutConfig[0], oscOutConfig[1])
+    return oscResult
+}
+
+async function disconnectAll() {
+    await disconnectOBS()
+    await disconnectOSC()
+}
+
+
+async function updateConfig(obsConfig, oscInConfig, oscOutConfig) {
+    if (configJson === null) {
+        console.error('Config not initialized')
+        return
+    }
+
+    configJson.network.obsWebSocket = {
+        ip: obsConfig[0].toString(),
+        port: obsConfig[1].toString(),
+        password: obsConfig[2].toString()
+    }
+
+    configJson.network.oscIn = {
+        ip: oscInConfig[0].toString(),
+        port: oscInConfig[1].toString()
+    }
+
+    configJson.network.oscOut = {
+        ip: oscOutConfig[0].toString(),
+        port: oscOutConfig[1].toString()
+    }
+
+    await saveConfig()
+}
+
+async function connectOBS(ip, port, password) {
     console.info('Connecting OBSWebSocket...')
     console.info(`ip: ${ip}, port: ${port}, password: ${password}`)
     if (obs) {
         console.error('OBSWebSocket already exist')
-        return { result: false, error: 'OBSWebSocket already exist' }
+        return { result: false, error: 'OBSWebSocket already exist', at: 'OBS WebSocket' }
     }
 
     obs = new OBSWebSocket()
@@ -63,13 +111,13 @@ async function connectOBS(_event, ip, port, password) {
     } catch (e) {
         console.error('OBSWebSocket error:', e)
         obs = null
-        return { result: false, error: e.error }
+        return { result: false, error: e.error, at: 'OBS WebSocket' }
     }
 
-    await updateOBSConfig(ip, port, password)
     obs.on('error', err => {
-        console.error('socket error:', err)
+        console.error('OBSWebSocket error:', err)
     })
+
     console.info('Connecting OBSWebSocket...Succeeded')
     return { result: true }
 }
@@ -78,35 +126,63 @@ async function disconnectOBS() {
     console.info('Disconnecting OBSWebSocket...')
     if (obs === null) {
         console.error('OBSWebSocket did not exist')
-        return { result: false, error: 'OBSWebSocket did not exist' }
     }
 
     try {
         await obs.disconnect()
     } catch (e) {
         console.error('OBSWebSocket error:', e)
-        obs = null
-        return { result: false, error: e.error }
     }
 
     obs = null
     console.info('Disconnecting OBSWebSocket...Succeeded')
+}
+
+async function connectOSC(ipIn, portIn, ipOut, portOut) {
+    try {
+        oscIn = new Server(portIn, ipIn, () => {
+            console.info('OSC server is listening')
+        })
+
+        oscIn.on('message', (message) => {
+            console.info('New OSC message', message)
+        })
+    } catch (e) {
+        console.error('Error occurred when starting OSC server:', e)
+        return { result: false, error: e, at: 'OSC In' }
+    }
+
+    try {
+        oscOut = new Client(ipOut, portOut)
+        console.info('OSC client created')
+    } catch (e) {
+        console.error('Error occurred when starting OSC client:', e)
+        return { result: false, error: e, at: 'OSC Out' }
+    }
+
     return { result: true }
 }
 
-async function updateOBSConfig(ip, port, password) {
-    if (configJson === null) {
-        console.error('Config not initialized')
-        return
+async function disconnectOSC() {
+    if (oscIn) {
+        try {
+            oscIn.close()
+        } catch (e) {
+            console.error('Error occurred when stopping OSC server:', e)
+        }
     }
 
-    configJson.network.obsWebSocket = {
-        ip: ip.toString(),
-        port: port.toString(),
-        password: password.toString(),
+    if (oscOut) {
+        try {
+            oscOut.close()
+        } catch (e) {
+            console.error('Error occurred when stopping OSC client:', e)
+        }
     }
 
-    await saveConfig()
+    oscIn = null
+    oscOut = null
+    console.info('OSC server/client stopped')
 }
 
 async function loadConfig() {
@@ -119,7 +195,7 @@ async function loadConfig() {
             configJson = JSON.parse(configString)
         } catch (e) {
             console.error('Cannot parse config file, set a default one')
-            configJson = { network: {}, misc: {} }
+            configJson = { openDevToolsOnStart: true, network: {}, misc: {} }
         }
 
     } catch (e) {
@@ -358,8 +434,8 @@ function createDevWindow() {
 
 app.whenReady().then(async () => {
     await loadConfig()
-    ipcMain.handle('connect:obs', connectOBS)
-    ipcMain.handle('disconnect:obs', disconnectOBS)
+    ipcMain.handle('connect:all', connectAll)
+    ipcMain.handle('disconnect:all', disconnectAll)
     ipcMain.handle('getConfig:obs', getConfig)
     createWindow()
 

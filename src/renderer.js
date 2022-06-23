@@ -8,11 +8,20 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     const configJson = await window.electronAPI.getConfig()
-    console.info(configJson)
     if (configJson.network.obsWebSocket) {
         setValue('#obsip', configJson.network.obsWebSocket.ip)
         setValue('#obsport', configJson.network.obsWebSocket.port)
         setValue('#obspassword', configJson.network.obsWebSocket.password)
+    }
+
+    if (configJson.network.oscIn) {
+        setValue('#oscinip', configJson.network.oscIn.ip)
+        setValue('#oscinport', configJson.network.oscIn.port)
+    }
+
+    if (configJson.network.oscOut) {
+        setValue('#oscoutip', configJson.network.oscOut.ip)
+        setValue('#oscoutport', configJson.network.oscOut.port)
     }
 })
 
@@ -20,29 +29,30 @@ document.querySelector('#connect-button').addEventListener('click', async (event
     const connectButton = event.target
 
     if (connected) {
-        const { result, error } = await window.electronAPI.disconnectOBS()
-        if (error) {
-            console.warn('Error occurred when connecting to OBS:', error)
-        }
+        await window.electronAPI.disconnectAll()
 
         connected = false
         connectButton.innerText = 'Connect'
         document.querySelectorAll('.network-config input').forEach((input) => input.removeAttribute('disabled'))
     } else {
+        document.querySelectorAll('.network-config input').forEach((input) => input.setAttribute('disabled', ''))
         // TODO: Do basic check here
-        let obsIP = document.querySelector('#obsip').value
+        let obsIp = document.querySelector('#obsip').value
         let obsPort = document.querySelector('#obsport').value
         let obsPassword = document.querySelector('#obspassword').value
+        let oscInIp = document.querySelector('#oscinip').value
+        let oscInPort = document.querySelector('#oscinport').value
+        let oscOutIp = document.querySelector('#oscoutip').value
+        let oscOutPort = document.querySelector('#oscoutport').value
 
-        if (obsIP === '') {
-            obsIP = document.querySelector('#obsip').placeholder
-        }
+        if (obsIp === '') obsIp = document.querySelector('#obsip').placeholder
+        if (obsPort === '') obsPort = document.querySelector('#obsport').placeholder
+        if (oscInIp === '') oscInIp = document.querySelector('#oscinip').placeholder
+        if (oscInPort === '') oscInPort = document.querySelector('#oscinport').placeholder
+        if (oscOutIp === '') oscOutIp = document.querySelector('#oscoutip').placeholder
+        if (oscOutPort === '') oscOutPort = document.querySelector('#oscoutport').placeholder
 
-        if (obsPort === '') {
-            obsPort = document.querySelector('#obsport').placeholder
-        }
-
-        const { result, error } = await window.electronAPI.connectOBS(obsIP, obsPort, obsPassword)
+        const { result, error, at } = await window.electronAPI.connectAll([obsIp, obsPort, obsPassword], [oscInIp, parseInt(oscInPort, 10)], [oscOutIp, parseInt(oscOutPort, 10)])
         if (result) {
             if (obsPassword === '') {
                 console.warn('No password for obs-websocket')
@@ -50,19 +60,9 @@ document.querySelector('#connect-button').addEventListener('click', async (event
 
             connected = true
             connectButton.innerText = 'Disconnect'
-            document.querySelectorAll('.network-config input').forEach((input) => input.setAttribute('disabled', ''))
         } else {
-            console.error('Error occurred when connecting to OBS:', error)
+            console.error(`Error occurred when starting ${at}: ${error}`)
+            document.querySelectorAll('.network-config input').forEach((input) => input.removeAttribute('disabled'))
         }
     }
-
-    // if (connected) {
-    //     connected = false
-    //     connectButton.innerText = 'Connect'
-    //     document.querySelectorAll('.network-config input').forEach((input) => input.removeAttribute('disabled'))
-    // } else {
-    //     connected = true
-    //     connectButton.innerText = 'Disconnect'
-    //     document.querySelectorAll('.network-config input').forEach((input) => input.setAttribute('disabled', ''))
-    // }
 })
