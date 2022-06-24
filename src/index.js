@@ -27,8 +27,24 @@ function openFileConnect() {
     console.info('openFileConnect triggered')
 }
 
-function openOriginalFile() {
-    console.info('openOriginalFile triggered')
+async function resetApp() {
+    dialog.showMessageBox({
+        message: 'OSC for OBS will reset all settings, are you sure?',
+        type: 'question',
+        buttons: ['Yes', 'No'],
+    }).then(async (data) => {
+        if (data.response === 1) {
+            console.info('App reset canceled')
+            return
+        } else {
+            isConfigModified = false
+            configJson = { openDevToolsOnStart: true, network: {}, misc: {} }
+            await saveConfig()
+            console.info('App config has been reset, restarting...')
+            app.relaunch()
+            app.quit()
+        }
+    })
 }
 
 function qlabCue() {
@@ -82,7 +98,7 @@ function updateNetworkConfig(obsConfig, oscInConfig, oscOutConfig) {
         return
     }
 
-    for (const key in Object.keys(obsConfig)) {
+    for (const key in obsConfig) {
         if (configJson.network.obsWebSocket[key] != obsConfig[key]) {
             configJson.network.obsWebSocket = obsConfig
             isConfigModified = true
@@ -90,7 +106,7 @@ function updateNetworkConfig(obsConfig, oscInConfig, oscOutConfig) {
         }
     }
 
-    for (const key in Object.keys(oscInConfig)) {
+    for (const key in oscInConfig) {
         if (configJson.network.oscIn[key] != oscInConfig[key]) {
             configJson.network.oscIn = oscInConfig
             isConfigModified = true
@@ -98,7 +114,7 @@ function updateNetworkConfig(obsConfig, oscInConfig, oscOutConfig) {
         }
     }
 
-    for (const key in Object.keys(oscOutConfig)) {
+    for (const key in oscOutConfig) {
         if (configJson.network.oscOut[key] != oscOutConfig[key]) {
             configJson.network.oscOut = oscOutConfig
             isConfigModified = true
@@ -194,24 +210,7 @@ function setApplicationMenu() {
             submenu: [
                 isMac ? { role: 'close' } : { role: 'quit' },
                 {
-                    label: 'Save As...',
-                    accelerator: 'Shift+CommandOrControl+s',
-                    click: () => saveAsFile()
-                },
-                {
-                    label: 'Open',
-                    accelerator: 'CommandOrControl+o',
-                    click: () => openFile()
-
-                },
-                {
-                    label: 'Open/Connect',
-                    accelerator: 'CommandOrControl+Shift+o',
-                    click: () => openFileConnect()
-
-                },
-                {
-                    label: 'Automatically Connect on Startup',
+                    label: 'Auto Connect on Startup',
                     type: 'checkbox',
                     checked: false,
                     click: (item) => {
@@ -222,10 +221,10 @@ function setApplicationMenu() {
                         }
                     }
                 },
+                { type: 'separator' },
                 {
-                    label: 'Revert to Default Values',
-                    accelerator: 'CommandOrControl+Shift+/',
-                    click: () => openOriginalFile()
+                    label: 'Reset to Default',
+                    click: async () => resetApp()
                 }
             ]
         },
@@ -267,8 +266,9 @@ function setApplicationMenu() {
                     accelerator: 'CommandOrControl+Shift+I',
                     click: () => toggleDevWindow()
                 },
+                { type: 'separator' },
                 {
-                    label: 'Open DevTools At Startup',
+                    label: 'Open DevTools on Startup',
                     type: 'checkbox',
                     checked: configJson.openDevToolsOnStart ? configJson.openDevToolsOnStart : true,
                     click: (item) => {
@@ -279,13 +279,7 @@ function setApplicationMenu() {
                             configJson.openDevToolsOnStart = false
                         }
                     }
-                },
-                { type: 'separator' },
-                { role: 'resetZoom' },
-                { role: 'zoomIn' },
-                { role: 'zoomOut' },
-                { type: 'separator' },
-                { role: 'togglefullscreen' }
+                }
             ]
         },
         {

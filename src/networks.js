@@ -29,6 +29,10 @@ async function connectOBS(config) {
         console.error('OBSWebSocket error:', err)
     })
 
+    obs.on('ConnectionClosed', () => {
+        console.info('OBSWebSocket is closed')
+    })
+
     console.info('Connecting OBSWebSocket...Succeeded')
     return { result: true }
 }
