@@ -2,13 +2,19 @@ const { BrowserWindow } = require('electron')
 const OBSWebSocket = require('obs-websocket-js')
 const { Client, Server } = require('node-osc')
 
-module.exports = { connectOBS, disconnectOBS, connectOSC, disconnectOSC }
+module.exports = { connectOBS, disconnectOBS, connectOSC, disconnectOSC, setupOBSOSC, syncMiscConfig }
 
 let obs
 let oscIn
 let oscOut
 
+let miscConfig = {}
 let isClosedManually = true
+
+function syncMiscConfig(config) {
+    console.info('Misc config synced')
+    miscConfig = config
+}
 
 async function connectOBS(config) {
     console.info('Connecting OBSWebSocket...')
@@ -125,4 +131,44 @@ async function disconnectOSC() {
     oscIn = null
     oscOut = null
     console.info('OSC server/client stopped')
+}
+
+function setupOBSOSC() {
+    if (!oscIn) {
+        console.warn('OSC server not available')
+        return
+    }
+
+    if (!oscOut) {
+        console.warn('OSC client not available')
+        return
+    }
+
+    obs.on('TransitionBegin', (event) => {
+        if (miscConfig.notifyActiveScene) {
+            if (miscConfig.useCustomPath && miscConfig.useCustomPath.enabled === true) {
+                const sceneName = event.toScene.replaceAll(' ', '_')
+                const customPath = `/${miscConfig.useCustomPath.prefix}/${sceneName}${(miscConfig.useCustomPath.suffix !== '') ? '/' + miscConfig.useCustomPath.suffix : ''}`
+                oscOut.send(customPath, 1, () => {
+                    console.info('Active scene changes (custom path)')
+                })
+            } else {
+                oscOut.send('/activeScene', event.toScene, () => {
+                    console.info('Active scene changes')
+                })
+            }
+        }
+    })
+
+    obs.on('SwitchScenes', (event) => {
+        if (miscConfig.notifyActiveScene) {
+            if (miscConfig.useCustomPath && miscConfig.useCustomPath.enabled === true) {
+                return
+            }
+
+            oscOut.send('/activeSceneCompleted', event.sceneName, () => {
+                console.info('Active scene changes')
+            })
+        }
+    })
 }

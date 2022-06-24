@@ -41,25 +41,25 @@
         <div class="misc-config">
             <div class="switch-config" title="Notify OSC client when active scene changes">
                 Notify OBS Active Scene
-                <div class="switch" switch-action="testButton" value="0"></div>
+                <div class="switch" id="switch-notifyActiveScene" switch-action="notifyActiveScene" value="0"></div>
             </div>
         </div>
-        <div class="misc-config disabled" id="scene-feedback">
-            <div class="switch-config" title="Set custom path for feedback">
-                TouchOSC Feedback
-                <div class="switch" switch-action="testButton2" value="0"></div>
+        <div class="misc-config disabled" id="custom-scene-feedback">
+            <div class="switch-config" title="Notify active scene through custom path">
+                Custom Feedback Path
+                <div class="switch" id="switch-useCustomPath" switch-action="useCustomPath" value="0"></div>
             </div>
             <div id="scene-feedback-path" title="Custom OSC path for feedback, fill in before enable it">
                 /
-                <input type="text" id="oscoutprepend" value="" size="4">
+                <input type="text" id="useCustomPath-prefix" placeholder="cue" size="4">
                 /[SceneName]/
-                <input type="text" id="oscoutpostpend" value="" size="4">
+                <input type="text" id="useCustomPath-suffix" size="4" title="Leave it blank if you don't want it">
             </div>
         </div>
         <button id="connect-button">Connect</button>
     </div>
-    <script src="renderer.js"></script>
     <script src="switch.js"></script>
+    <script src="renderer.js"></script>
 </body>
 
 </html>

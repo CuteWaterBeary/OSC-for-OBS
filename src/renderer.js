@@ -22,6 +22,27 @@ window.addEventListener('DOMContentLoaded', async () => {
         setValue('#oscoutip', configJson.network.oscOut.ip)
         setValue('#oscoutport', configJson.network.oscOut.port)
     }
+
+    for (const key in configJson.misc) {
+        const iSwitch = document.querySelector(`#switch-${key}`)
+        if (iSwitch) {
+            if (typeof(configJson.misc[key]) === 'object') {
+                for (const subkey in configJson.misc[key]) {
+                    if (subkey === 'enabled') continue
+                    const input = document.querySelector(`#${key}-${subkey}`)
+                    if (input) input.value = configJson.misc[key][subkey]
+                }
+                
+                if(configJson.misc[key].enabled === true) {
+                    const event = new MouseEvent('click', { button: -1 })
+                    iSwitch.dispatchEvent(event)
+                }
+            } else if (configJson.misc[key] === true) {
+                const event = new MouseEvent('click', { button: -1 })
+                iSwitch.dispatchEvent(event)
+            }
+        }
+    }
 })
 
 document.querySelector('#connect-button').addEventListener('click', async (event) => {
