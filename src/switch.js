@@ -38,4 +38,3 @@ function setSwitch() {
 }
 
 setSwitch()
-

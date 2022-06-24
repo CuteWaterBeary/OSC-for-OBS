@@ -6,8 +6,12 @@ const { connectOBS, disconnectOBS, connectOSC, disconnectOSC } = require('./netw
 
 const configPath = path.join(__dirname, 'config.json')
 const windowHeight = 700
+const defaultConfig = {
+    openDevToolsOnStart: true,
+    reconnectOBSOnDisconnect: true,
+    network: {}, misc: {}
+}
 
-let autoConnect
 let isConfigModified = false
 let configJson = null
 
@@ -15,36 +19,24 @@ let configJson = null
 let mainWindowId
 let devWindowId
 
-function saveAsFile() {
-    console.info('saveAsFile triggered')
-}
-
-function openFile() {
-    console.info('openFile triggered')
-}
-
-function openFileConnect() {
-    console.info('openFileConnect triggered')
-}
-
 async function resetApp() {
-    dialog.showMessageBox({
+    const result = await dialog.showMessageBox({
         message: 'OSC for OBS will reset all settings, are you sure?',
         type: 'question',
         buttons: ['Yes', 'No'],
-    }).then(async (data) => {
-        if (data.response === 1) {
-            console.info('App reset canceled')
-            return
-        } else {
-            isConfigModified = false
-            configJson = { openDevToolsOnStart: true, network: {}, misc: {} }
-            await saveConfig()
-            console.info('App config has been reset, restarting...')
-            app.relaunch()
-            app.quit()
-        }
     })
+
+    if (result.response === 1) {
+        console.info('App reset canceled')
+        return
+    }
+
+    isConfigModified = false
+    configJson = defaultConfig
+    await saveConfig()
+    console.info('App config has been reset, restarting...')
+    app.relaunch()
+    app.quit()
 }
 
 function qlabCue() {
@@ -69,6 +61,11 @@ function toggleDevWindow() {
 
 async function connectAll(_event, obsConfig, oscInConfig, oscOutConfig) {
     updateNetworkConfig(obsConfig, oscInConfig, oscOutConfig)
+    if (configJson.reconnectOBSOnDisconnect !== false) {
+        obsConfig.autoReconnect = true
+    }
+    obsConfig.mainWindowId = mainWindowId
+
     const obsResult = await connectOBS(obsConfig)
     if (obsResult.result === false) {
         return obsResult
@@ -133,18 +130,18 @@ async function loadConfig() {
             configJson = JSON.parse(configString)
             if (typeof (configJson) !== 'object') {
                 console.error('Invalid config file, set to default one')
-                configJson = { openDevToolsOnStart: true, network: {}, misc: {} }
+                configJson = defaultConfig
                 isConfigModified = true
             }
         } catch (e) {
             console.error('Cannot parse config file, set to default one')
-            configJson = { openDevToolsOnStart: true, network: {}, misc: {} }
+            configJson = defaultConfig
             isConfigModified = true
         }
 
     } catch (e) {
         console.error('Error occurred when reading config:', e.message)
-        configJson = { openDevToolsOnStart: true, network: {}, misc: {} }
+        configJson = defaultConfig
         isConfigModified = true
         await showConfigDialog()
         await saveConfig()
@@ -171,6 +168,8 @@ async function saveConfig() {
     } finally {
         await fileHandle?.close()
     }
+
+    console.info('Config file saved')
 }
 
 async function checkConfigState() {
@@ -208,16 +207,16 @@ function setApplicationMenu() {
         {
             label: 'File',
             submenu: [
-                isMac ? { role: 'close' } : { role: 'quit' },
                 {
-                    label: 'Auto Connect on Startup',
+                    label: 'Auto Reconnect OBS Websocket',
                     type: 'checkbox',
-                    checked: false,
+                    checked: configJson.hasOwnProperty('reconnectOBSOnDisconnect') ? configJson.reconnectOBSOnDisconnect : true,
                     click: (item) => {
-                        if (item.checked == false) {
-                            autoConnect = false
-                        } else if (item.checked == true) {
-                            autoConnect = true
+                        isConfigModified = true
+                        if (item.checked) {
+                            configJson.reconnectOBSOnDisconnect = true
+                        } else {
+                            configJson.reconnectOBSOnDisconnect = false
                         }
                     }
                 },
@@ -225,7 +224,9 @@ function setApplicationMenu() {
                 {
                     label: 'Reset to Default',
                     click: async () => resetApp()
-                }
+                },
+                { type: 'separator' },
+                isMac ? { role: 'close' } : { role: 'quit' }
             ]
         },
         {
@@ -270,7 +271,7 @@ function setApplicationMenu() {
                 {
                     label: 'Open DevTools on Startup',
                     type: 'checkbox',
-                    checked: configJson.openDevToolsOnStart ? configJson.openDevToolsOnStart : true,
+                    checked: configJson.hasOwnProperty('openDevToolsOnStart') ? configJson.openDevToolsOnStart : true,
                     click: (item) => {
                         isConfigModified = true
                         if (item.checked) {
@@ -309,10 +310,6 @@ function setApplicationMenu() {
                     label: 'Log All Available Scene Items (Sources)',
                     accelerator: 'CommandOrControl+2',
                     click: () => listSceneItems()
-                },
-                {
-                    label: 'Test script',
-                    click: async () => loadConfig()
                 }
             ]
         },

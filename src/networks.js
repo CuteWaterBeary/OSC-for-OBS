@@ -1,3 +1,4 @@
+const { BrowserWindow } = require('electron')
 const OBSWebSocket = require('obs-websocket-js')
 const { Client, Server } = require('node-osc')
 
@@ -6,6 +7,8 @@ module.exports = { connectOBS, disconnectOBS, connectOSC, disconnectOSC }
 let obs
 let oscIn
 let oscOut
+
+let isClosedManually = true
 
 async function connectOBS(config) {
     console.info('Connecting OBSWebSocket...')
@@ -29,10 +32,33 @@ async function connectOBS(config) {
         console.error('OBSWebSocket error:', err)
     })
 
-    obs.on('ConnectionClosed', () => {
+    obs.on('ConnectionClosed', async () => {
         console.info('OBSWebSocket is closed')
+        if (!isClosedManually) {
+            async function reconnectOBS(config) {
+                try {
+                    console.info('Reconnecting OBSWebSocket...')
+                    const address = config.ip + ':' + config.port
+                    await obs.connect({ address: address, password: config.password })
+                    console.info('Reconnecting OBSWebSocket...Succeeded')
+                } catch (e) {
+                    console.error('Reconnecting failed:', e)
+                }
+            }
+
+            setTimeout(reconnectOBS, 1500, config)
+        } else {
+            const mainWindow = BrowserWindow.fromId(config.mainWindowId)
+            if (mainWindow) {
+                mainWindow.webContents.send('disconnect:cancel')
+                console.warn('Connections canceled')
+            }
+        }
     })
 
+    if (config.autoReconnect) {
+        isClosedManually = false
+    }
     console.info('Connecting OBSWebSocket...Succeeded')
     return { result: true }
 }
@@ -50,6 +76,7 @@ async function disconnectOBS() {
     }
 
     obs = null
+    isClosedManually = true
     console.info('Disconnecting OBSWebSocket...Succeeded')
 }
 
