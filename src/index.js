@@ -1,9 +1,8 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron')
-const OBSWebSocket = require('obs-websocket-js')
-const { Client, Server } = require('node-osc')
 
 const { open } = require('fs/promises')
 const path = require('path')
+const { connectOBS, disconnectOBS, connectOSC, disconnectOSC } = require('./networks')
 
 const configPath = path.join(__dirname, 'config.json')
 const windowHeight = 700
@@ -11,9 +10,6 @@ const windowHeight = 700
 let autoConnect
 let configJson = null
 
-let obs
-let oscIn
-let oscOut
 
 let mainWindowId
 let devWindowId
@@ -96,95 +92,6 @@ async function updateConfig(obsConfig, oscInConfig, oscOutConfig) {
     await saveConfig()
 }
 
-async function connectOBS(ip, port, password) {
-    console.info('Connecting OBSWebSocket...')
-    console.info(`ip: ${ip}, port: ${port}, password: ${password}`)
-    if (obs) {
-        console.error('OBSWebSocket already exist')
-        return { result: false, error: 'OBSWebSocket already exist', at: 'OBS WebSocket' }
-    }
-
-    obs = new OBSWebSocket()
-    try {
-        const address = ip + ':' + port
-        await obs.connect({ address: address, password: password })
-    } catch (e) {
-        console.error('OBSWebSocket error:', e)
-        obs = null
-        return { result: false, error: e.error, at: 'OBS WebSocket' }
-    }
-
-    obs.on('error', err => {
-        console.error('OBSWebSocket error:', err)
-    })
-
-    console.info('Connecting OBSWebSocket...Succeeded')
-    return { result: true }
-}
-
-async function disconnectOBS() {
-    console.info('Disconnecting OBSWebSocket...')
-    if (obs === null) {
-        console.error('OBSWebSocket did not exist')
-    }
-
-    try {
-        await obs.disconnect()
-    } catch (e) {
-        console.error('OBSWebSocket error:', e)
-    }
-
-    obs = null
-    console.info('Disconnecting OBSWebSocket...Succeeded')
-}
-
-async function connectOSC(ipIn, portIn, ipOut, portOut) {
-    try {
-        oscIn = new Server(portIn, ipIn, () => {
-            console.info('OSC server is listening')
-        })
-
-        oscIn.on('message', (message) => {
-            console.info('New OSC message', message)
-        })
-    } catch (e) {
-        console.error('Error occurred when starting OSC server:', e)
-        return { result: false, error: e, at: 'OSC In' }
-    }
-
-    try {
-        oscOut = new Client(ipOut, portOut)
-        console.info('OSC client created')
-    } catch (e) {
-        console.error('Error occurred when starting OSC client:', e)
-        return { result: false, error: e, at: 'OSC Out' }
-    }
-
-    return { result: true }
-}
-
-async function disconnectOSC() {
-    if (oscIn) {
-        try {
-            oscIn.close()
-        } catch (e) {
-            console.error('Error occurred when stopping OSC server:', e)
-        }
-    }
-
-    if (oscOut) {
-        try {
-            oscOut.close()
-        } catch (e) {
-            console.error('Error occurred when stopping OSC client:', e)
-        }
-    }
-
-    oscIn = null
-    oscOut = null
-    console.info('OSC server/client stopped')
-}
-
 async function loadConfig() {
     let fileHandle
     let configString
@@ -196,11 +103,13 @@ async function loadConfig() {
         } catch (e) {
             console.error('Cannot parse config file, set a default one')
             configJson = { openDevToolsOnStart: true, network: {}, misc: {} }
-            showConfigDialog()
         }
 
     } catch (e) {
-        console.error('Error occurred when reading config', e.message)
+        console.error('Error occurred when reading config:', e.message)
+        configJson = { openDevToolsOnStart: true, network: {}, misc: {} }
+        await showConfigDialog()
+        await saveConfig()
     } finally {
         await fileHandle?.close()
     }
@@ -214,12 +123,12 @@ async function saveConfig() {
     let fileHandle
     let configString
     try {
-        fileHandle = await open(configPath, 'r+')
+        fileHandle = await open(configPath, 'w+')
         configString = JSON.stringify(configJson)
         await fileHandle.truncate(0) // Wipe previous config
         await fileHandle.write(configString, 0)
     } catch (e) {
-        console.error(e.message)
+        console.error('Error occurred when saving config:', e.message)
     } finally {
         await fileHandle?.close()
     }
