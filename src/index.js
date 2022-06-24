@@ -196,6 +196,7 @@ async function loadConfig() {
         } catch (e) {
             console.error('Cannot parse config file, set a default one')
             configJson = { openDevToolsOnStart: true, network: {}, misc: {} }
+            showConfigDialog()
         }
 
     } catch (e) {
@@ -222,6 +223,17 @@ async function saveConfig() {
     } finally {
         await fileHandle?.close()
     }
+}
+
+async function showConfigDialog() {
+    const dialogMessage = `App settings will be automatically saved to:
+\n${configPath.toString()}
+\nIf you saw this message multiple times, please check your antivirus or system settings.`
+    await dialog.showMessageBox({
+        message: dialogMessage,
+        type: 'info',
+        title: 'Auto Save Reminder'
+    })
 }
 
 function setApplicationMenu() {

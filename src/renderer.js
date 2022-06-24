@@ -1,6 +1,5 @@
 let connected = false
 
-
 window.addEventListener('DOMContentLoaded', async () => {
     const setValue = (selector, value) => {
         const element = document.querySelector(selector)
