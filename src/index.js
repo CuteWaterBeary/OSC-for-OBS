@@ -15,7 +15,6 @@ const defaultConfig = {
 let isConfigModified = false
 let configJson = null
 
-
 let mainWindowId
 let devWindowId
 

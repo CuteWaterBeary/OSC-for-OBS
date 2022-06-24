@@ -7,7 +7,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     const configJson = await window.electronAPI.getConfig()
-    console.info(configJson)
     if (configJson.network.obsWebSocket) {
         setValue('#obsip', configJson.network.obsWebSocket.ip)
         setValue('#obsport', configJson.network.obsWebSocket.port)
@@ -81,5 +80,5 @@ window.electronAPI.cancelConnections(async () => {
         connected = false
         connectButton.innerText = 'Connect'
         document.querySelectorAll('.network-config input').forEach((input) => input.removeAttribute('disabled'))
-    } 
+    }
 })
