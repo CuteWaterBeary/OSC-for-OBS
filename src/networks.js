@@ -7,9 +7,9 @@ let obs
 let oscIn
 let oscOut
 
-async function connectOBS(ip, port, password) {
+async function connectOBS(config) {
     console.info('Connecting OBSWebSocket...')
-    console.info(`ip: ${ip}, port: ${port}, password: ${password}`)
+    console.info(`ip: ${config.ip}, port: ${config.port}, password: ${config.password}`)
     if (obs) {
         console.error('OBSWebSocket already exist')
         return { result: false, error: 'OBSWebSocket already exist', at: 'OBS WebSocket' }
@@ -17,8 +17,8 @@ async function connectOBS(ip, port, password) {
 
     obs = new OBSWebSocket()
     try {
-        const address = ip + ':' + port
-        await obs.connect({ address: address, password: password })
+        const address = config.ip + ':' + config.port
+        await obs.connect({ address: address, password: config.password })
     } catch (e) {
         console.error('OBSWebSocket error:', e)
         obs = null
@@ -49,10 +49,10 @@ async function disconnectOBS() {
     console.info('Disconnecting OBSWebSocket...Succeeded')
 }
 
-async function connectOSC(ipIn, portIn, ipOut, portOut) {
+async function connectOSC(oscInConfig, oscOutConfig) {
     try {
-        oscIn = new Server(portIn, ipIn, () => {
-            console.info('OSC server is listening')
+        oscIn = new Server(oscInConfig.port, oscInConfig.ip, () => {
+            console.info(`OSC server is listening to ${oscInConfig.ip}:${oscInConfig.port}`)
         })
 
         oscIn.on('message', (message) => {
@@ -64,8 +64,8 @@ async function connectOSC(ipIn, portIn, ipOut, portOut) {
     }
 
     try {
-        oscOut = new Client(ipOut, portOut)
-        console.info('OSC client created')
+        oscOut = new Client(oscOutConfig.ip, oscOutConfig.port)
+        console.info(`OSC client is ready to send to ${oscOutConfig.ip}:${oscOutConfig.port}`)
     } catch (e) {
         console.error('Error occurred when starting OSC client:', e)
         return { result: false, error: e, at: 'OSC Out' }

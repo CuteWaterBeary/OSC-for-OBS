@@ -52,13 +52,13 @@ document.querySelector('#connect-button').addEventListener('click', async (event
         if (oscOutPort === '') oscOutPort = document.querySelector('#oscoutport').placeholder
 
         try {
-            const { result, error, at } = await window.electronAPI.connectAll([obsIp, obsPort, obsPassword], [oscInIp, parseInt(oscInPort, 10)], [oscOutIp, parseInt(oscOutPort, 10)])
+            const { result, error, at } = await window.electronAPI.connectAll({ ip: obsIp, port: obsPort, password: obsPassword }, { ip: oscInIp, port: parseInt(oscInPort, 10) }, { ip: oscOutIp, port: parseInt(oscOutPort, 10) })
 
             if (result) {
                 if (obsPassword === '') {
                     console.warn('No password for obs-websocket')
                 }
-    
+
                 connected = true
                 connectButton.innerText = 'Disconnect'
             } else {
@@ -68,7 +68,6 @@ document.querySelector('#connect-button').addEventListener('click', async (event
         } catch (e) {
             console.error('Internal error:', e)
             document.querySelectorAll('.network-config input').forEach((input) => input.removeAttribute('disabled'))
-            return
         }
     }
 })

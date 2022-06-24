@@ -8,6 +8,7 @@ const configPath = path.join(__dirname, 'config.json')
 const windowHeight = 700
 
 let autoConnect
+let isConfigModified = false
 let configJson = null
 
 
@@ -39,7 +40,7 @@ function listSceneItems() {
 }
 
 function toggleDevWindow() {
-    const devWindow = BrowserWindow.fromId(devWindowId)
+    const devWindow = devWindowId ? BrowserWindow.fromId(devWindowId) : null
     const mainWindow = BrowserWindow.fromId(mainWindowId)
 
     if (devWindow) {
@@ -51,13 +52,13 @@ function toggleDevWindow() {
 }
 
 async function connectAll(_event, obsConfig, oscInConfig, oscOutConfig) {
-    await updateConfig(obsConfig, oscInConfig, oscOutConfig)
-    const obsResult = await connectOBS(obsConfig[0], obsConfig[1], obsConfig[2])
+    updateNetworkConfig(obsConfig, oscInConfig, oscOutConfig)
+    const obsResult = await connectOBS(obsConfig)
     if (obsResult.result === false) {
         return obsResult
     }
 
-    const oscResult = await connectOSC(oscInConfig[0], oscInConfig[1], oscOutConfig[0], oscOutConfig[1])
+    const oscResult = await connectOSC(oscInConfig, oscOutConfig)
     return oscResult
 }
 
@@ -67,29 +68,43 @@ async function disconnectAll() {
 }
 
 
-async function updateConfig(obsConfig, oscInConfig, oscOutConfig) {
+function updateNetworkConfig(obsConfig, oscInConfig, oscOutConfig) {
     if (configJson === null) {
         console.error('Config not initialized')
         return
     }
 
-    configJson.network.obsWebSocket = {
-        ip: obsConfig[0].toString(),
-        port: obsConfig[1].toString(),
-        password: obsConfig[2].toString()
+    if (!configJson.network.obsWebSocket || !configJson.network.oscIn || !configJson.network.oscOut) {
+        configJson.network.obsWebSocket = obsConfig
+        configJson.network.oscIn = oscInConfig
+        configJson.network.oscOut = oscOutConfig
+        isConfigModified = true
+        return
     }
 
-    configJson.network.oscIn = {
-        ip: oscInConfig[0].toString(),
-        port: oscInConfig[1].toString()
+    for (const key in Object.keys(obsConfig)) {
+        if (configJson.network.obsWebSocket[key] != obsConfig[key]) {
+            configJson.network.obsWebSocket = obsConfig
+            isConfigModified = true
+            break
+        }
     }
 
-    configJson.network.oscOut = {
-        ip: oscOutConfig[0].toString(),
-        port: oscOutConfig[1].toString()
+    for (const key in Object.keys(oscInConfig)) {
+        if (configJson.network.oscIn[key] != oscInConfig[key]) {
+            configJson.network.oscIn = oscInConfig
+            isConfigModified = true
+            break
+        }
     }
 
-    await saveConfig()
+    for (const key in Object.keys(oscOutConfig)) {
+        if (configJson.network.oscOut[key] != oscOutConfig[key]) {
+            configJson.network.oscOut = oscOutConfig
+            isConfigModified = true
+            break
+        }
+    }
 }
 
 async function loadConfig() {
@@ -100,14 +115,21 @@ async function loadConfig() {
         configString = await fileHandle.readFile('utf-8')
         try {
             configJson = JSON.parse(configString)
+            if (typeof (configJson) !== 'object') {
+                console.error('Invalid config file, set to default one')
+                configJson = { openDevToolsOnStart: true, network: {}, misc: {} }
+                isConfigModified = true
+            }
         } catch (e) {
-            console.error('Cannot parse config file, set a default one')
+            console.error('Cannot parse config file, set to default one')
             configJson = { openDevToolsOnStart: true, network: {}, misc: {} }
+            isConfigModified = true
         }
 
     } catch (e) {
         console.error('Error occurred when reading config:', e.message)
         configJson = { openDevToolsOnStart: true, network: {}, misc: {} }
+        isConfigModified = true
         await showConfigDialog()
         await saveConfig()
     } finally {
@@ -127,11 +149,16 @@ async function saveConfig() {
         configString = JSON.stringify(configJson)
         await fileHandle.truncate(0) // Wipe previous config
         await fileHandle.write(configString, 0)
+        isConfigModified = false
     } catch (e) {
         console.error('Error occurred when saving config:', e.message)
     } finally {
         await fileHandle?.close()
     }
+}
+
+async function checkConfigState() {
+    if (isConfigModified) await saveConfig()
 }
 
 async function showConfigDialog() {
@@ -239,6 +266,19 @@ function setApplicationMenu() {
                     label: 'Toggle Develepoer Tools',
                     accelerator: 'CommandOrControl+Shift+I',
                     click: () => toggleDevWindow()
+                },
+                {
+                    label: 'Open DevTools At Startup',
+                    type: 'checkbox',
+                    checked: configJson.openDevToolsOnStart ? configJson.openDevToolsOnStart : true,
+                    click: (item) => {
+                        isConfigModified = true
+                        if (item.checked) {
+                            configJson.openDevToolsOnStart = true
+                        } else {
+                            configJson.openDevToolsOnStart = false
+                        }
+                    }
                 },
                 { type: 'separator' },
                 { role: 'resetZoom' },
@@ -363,6 +403,8 @@ app.whenReady().then(async () => {
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) createWindow()
     })
+
+    setInterval(checkConfigState, 1000)
 })
 
 app.on('window-all-closed', () => {
