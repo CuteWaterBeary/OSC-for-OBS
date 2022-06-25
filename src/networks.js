@@ -163,7 +163,7 @@ async function setUpOBSOSC() {
             }
 
             oscOut.send('/activeSceneCompleted', event.sceneName, () => {
-                console.info('Active scene changes')
+                console.info('Active scene change completed')
             })
         }
     })
@@ -182,9 +182,8 @@ async function processOSCInMessage(message) {
 
     const path = message[0].split('/')
     path.shift()
-    console.info('message path:', path)
+
     if (path[0] === 'scene') {
-        console.info('owo')
         await setOBSCurrentScene(path[1], message[1])
     } else if (path[0] === 'go' || path === 'back') {
 
@@ -334,6 +333,11 @@ async function processOSCInMessage(message) {
 }
 
 async function setOBSCurrentScene(scene, arg) {
+    if (scene && arg === 0) {
+        console.info('setOBSCurrentScene - Do nothing')
+        return
+    }
+
     let sceneName
     if (scene) {
         sceneName = scene.replaceAll('_', ' ')
@@ -358,6 +362,8 @@ async function setOBSCurrentScene(scene, arg) {
             return
         }
     }
+
+    console.error('setOBSCurrentScene - Trying to change to scene:', sceneName)
 
     try {
         await obs.send('SetCurrentScene', { 'scene-name': sceneName })
