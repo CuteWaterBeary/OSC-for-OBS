@@ -2,7 +2,7 @@ const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron')
 
 const { open } = require('fs/promises')
 const path = require('path')
-const { connectOBS, disconnectOBS, connectOSC, disconnectOSC, setupOBSOSC, syncMiscConfig } = require('./networks')
+const { connectOBS, disconnectOBS, connectOSC, disconnectOSC, setUpOBSOSC, syncMiscConfig } = require('./networks')
 
 const configPath = path.join(__dirname, 'config.json')
 const windowHeight = 700
@@ -83,7 +83,7 @@ async function connectAll(_event, obsConfig, oscInConfig, oscOutConfig) {
 
     const oscResult = await connectOSC(oscInConfig, oscOutConfig)
     if (oscResult.result) {
-        setupOBSOSC()
+        setUpOBSOSC()
     }
     return oscResult
 }
