@@ -38,24 +38,24 @@ async function resetApp() {
     })
 
     if (result.response === 1) {
-        DEBUG && console.info('App reset canceled')
+        if (DEBUG) console.info('App reset canceled')
         return
     }
 
     isConfigModified = false
     configJson = defaultConfig
     await saveConfig()
-    DEBUG && console.info('App config has been reset, restarting...')
+    if (DEBUG) console.info('App config has been reset, restarting...')
     app.relaunch()
     app.quit()
 }
 
 function qlabCue() {
-    DEBUG && console.info('qlabCue triggered')
+    if (DEBUG) console.info('qlabCue triggered')
 }
 
 function listSceneItems() {
-    DEBUG && console.info('listSceneItems triggered')
+    if (DEBUG) console.info('listSceneItems triggered')
 }
 
 function toggleDevWindow() {
@@ -97,7 +97,7 @@ async function disconnectAll() {
 
 function updateNetworkConfig(obsConfig, oscInConfig, oscOutConfig) {
     if (configJson === null) {
-        DEBUG && console.error('Config not initialized')
+        if (DEBUG) console.error('Config not initialized')
         return
     }
 
@@ -143,18 +143,18 @@ async function loadConfig() {
         try {
             configJson = JSON.parse(configString)
             if (typeof (configJson) !== 'object') {
-                DEBUG && console.error('Invalid config file, set to default one')
+                if (DEBUG) console.error('Invalid config file, set to default one')
                 configJson = defaultConfig
                 isConfigModified = true
             }
         } catch (e) {
-            DEBUG && console.error('Cannot parse config file, set to default one')
+            if (DEBUG) console.error('Cannot parse config file, set to default one')
             configJson = defaultConfig
             isConfigModified = true
         }
 
     } catch (e) {
-        DEBUG && console.error('Error occurred when reading config:', e.message)
+        if (DEBUG) console.error('Error occurred when reading config:', e.message)
         configJson = defaultConfig
         isConfigModified = true
         await showConfigDialog()
@@ -180,12 +180,12 @@ async function saveConfig() {
         await fileHandle.write(configString, 0)
         isConfigModified = false
     } catch (e) {
-        DEBUG && console.error('Error occurred when saving config:', e.message)
+        if (DEBUG) console.error('Error occurred when saving config:', e.message)
     } finally {
         await fileHandle?.close()
     }
 
-    DEBUG && console.info('Config file saved')
+    if (DEBUG) console.info('Config file saved')
 }
 
 async function checkConfigState() {
@@ -377,7 +377,7 @@ function createDevWindow() {
     const mainWindow = BrowserWindow.fromId(mainWindowId)
 
     if (mainWindow === null) {
-        DEBUG && console.error('Main window do not exist')
+        if (DEBUG) console.error('Main window do not exist')
         return
     }
 
@@ -401,7 +401,7 @@ function createDevWindow() {
 }
 
 app.whenReady().then(async () => {
-    DEBUG && console.info('app arguments:', process.argv.includes('--enable-log'))
+    if (DEBUG) console.info('app arguments:', process.argv.includes('--enable-log'))
     await loadConfig()
     ipcMain.handle('connect:all', connectAll)
     ipcMain.handle('disconnect:all', disconnectAll)
