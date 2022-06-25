@@ -4,8 +4,7 @@
   "description": "A test application based on electron",
   "main": "src/index.js",
   "scripts": {
-    "start": "electron .",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron . --enable-log",
     "build-win32": "electron-packager . electron-test --platform=win32 --arch=ia32",
     "build-win64": "electron-packager . electron-test --platform=win32 --arch=x64"
   },

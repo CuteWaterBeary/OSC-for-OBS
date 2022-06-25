@@ -6,15 +6,11 @@ function setSwitch() {
                 sceneFeedback.classList.remove('disabled')
                 if (event.button !== -1) {
                     window.electronAPI.updateMiscConfig('notifyActiveScene', true)
-                } else {
-                    console.info('owowow')
                 }
             } else {
                 sceneFeedback.classList.add('disabled')
                 if (event.button !== -1) {
                     window.electronAPI.updateMiscConfig('notifyActiveScene', false)
-                } else {
-                    console.info('owowow')
                 }
             }
         },
@@ -45,6 +41,17 @@ function setSwitch() {
                 }
             }
         },
+        useDbForVolume: (state, event) => {
+            if (state === 1) {
+                if (event.button !== -1) {
+                    window.electronAPI.updateMiscConfig('useDbForVolume', true)
+                }
+            } else {
+                if (event.button !== -1) {
+                    window.electronAPI.updateMiscConfig('useDbForVolume', false)
+                }
+            }
+        }
     }
 
     document.querySelectorAll('.switch').forEach((iSwitch) => {
