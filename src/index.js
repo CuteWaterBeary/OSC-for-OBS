@@ -337,6 +337,7 @@ function setApplicationMenu() {
 
 function createWindow() {
     const mainWindow = new BrowserWindow({
+        resizable: false,
         width: 320,
         height: windowHeight,
         maximizable: false,
@@ -401,7 +402,6 @@ function createDevWindow() {
 }
 
 app.whenReady().then(async () => {
-    if (DEBUG) console.info('app arguments:', process.argv.includes('--enable-log'))
     await loadConfig()
     ipcMain.handle('connect:all', connectAll)
     ipcMain.handle('disconnect:all', disconnectAll)

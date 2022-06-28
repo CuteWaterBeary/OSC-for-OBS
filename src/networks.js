@@ -13,6 +13,8 @@ let oscOut
 let miscConfig = {}
 let isClosedManually = true
 
+let audioSourceList = new Set()
+
 function syncMiscConfig(config) {
     if (DEBUG) console.info('Misc config synced')
     miscConfig = config
@@ -143,6 +145,7 @@ async function setUpOBSOSC() {
     }
 
     setUpOBSWebSocketListener()
+    getAudioSourceList()
 
     oscIn.on('message', (message) => {
         if (DEBUG) console.info('New OSC message:', message)
@@ -167,7 +170,7 @@ async function setUpOBSWebSocketListener() {
         }
     })
 
-    obs.on('SwitchScenes', (response) => {
+    obs.on('SwitchScenes', async (response) => {
         if (miscConfig.notifyActiveScene) {
             if (miscConfig.useCustomPath && miscConfig.useCustomPath.enabled === true) {
                 return
@@ -176,16 +179,36 @@ async function setUpOBSWebSocketListener() {
             oscOut.send('/activeSceneCompleted', response.sceneName, () => {
                 if (DEBUG) console.info('Active scene change completed')
             })
+
+            const globalAudioSource = await getGlobalAudioSourceList()
+            let sceneAudioSource = []
+
+            // if (DEBUG) console.info(response.sources)
+            response.sources.forEach(source => {
+                // Note: Use source.type instead of source.typeId here, probably a typo in OSBWebSocket (or .js)
+                if (audioSourceList.has(source.type) && !globalAudioSource.includes(source.name)) {
+                    sceneAudioSource.push(source.name)
+                }
+            })
+
+            sceneAudioSource.sort()
+            if (DEBUG) console.info('Scene audio list:', sceneAudioSource)
+            sceneAudioSource = [...globalAudioSource, ...sceneAudioSource]
+            // const sceneAudioPath = `/scene/${response.sceneName}/audio`
+            // const sceneAudioPath = `/sceneAudio/${response.sceneName}`
+            const sceneAudioPath = `/sceneAudio`
+            oscOut.send(sceneAudioPath, response.sceneName, sceneAudioSource)
         }
     })
 
     obs.on('SourceVolumeChanged', (response) => {
+        const volumePath = `/audio/${response.sourceName}/volume`
         if (miscConfig.useDbForVolume) {
-            oscOut.send(`/${response.sourceName}/volume`, response.volumeDb, () => {
+            oscOut.send(volumePath, response.volumeDb, () => {
                 if (DEBUG) console.info('Sending audio volume (dB) feedback for:', response.sourceName)
             })
         } else {
-            oscOut.send(`/${response.sourceName}/volume`, response.volume, () => {
+            oscOut.send(volumePath, response.volume, () => {
                 if (DEBUG) console.info('Sending audio volume feedback for:', response.sourceName)
             })
         }
@@ -202,148 +225,30 @@ async function processOSCInMessage(message) {
     path.shift()
 
     if (path[0] === 'scene') {
-        await setOBSCurrentScene(path[1], message[1])
-    } else if (path[0] === 'go' || path === 'back') {
+        setOBSCurrentScene(path[1], message[1])
+    } else if (path[0] === 'source') {
 
-    } else if (path[1] === 'transition') {
-        // Note: path might change later
-    } else if (path[2] === 'visible') {
+    } else if (path[0] === 'audio') {
+        setSourceAudio(path.slice(1), message[1])
+    } else if (path[0] === 'media') {
 
-    } else if (path[2] === 'filterVisibility') {
+    } else if (path[0] === 'profile') {
 
-    } else if (path[1] === 'setText') {
+    } else if (path[0] === 'record') {
 
-    } else if (path[2] === 'opacity') {
+    } else if (path[0] === 'sceneCollection') {
 
-    } else if (path[2] === 'gamma') {
+    } else if (path[0] === 'stream') {
 
-    } else if (path[2] === 'contrast') {
+    } else if (path[0] === 'studio') {
 
-    } else if (path[2] === 'brightness') {
+    } else if (path[0] === 'transition') {
 
-    } else if (path[2] === 'saturation') {
+    } else if (path[0] === 'virtualCam') {
 
-    } else if (path[2] === 'hueshift') {
+    } else if (path[0] === 'output') {
 
-    } else if (path[2] === 'position') {
-
-    } else if (path[2] === 'scale') {
-
-    } else if (path[2] === 'rotate') {
-
-    } else if (path[1] === 'mute') {
-
-    } else if (path[1] === 'unmute') {
-
-    } else if (path[1] === 'audioToggle') {
-
-    } else if (path[1] === 'volume') {
-        setSourceVolume(path[0], message[1])
-    } else if (path[1] === 'monitorOff') {
-
-    } else if (path[1] === 'monitorOnly') {
-
-    } else if (path[1] === 'monitorAndOutput') {
-
-    } else if (path[1] === 'mediaPlay') {
-
-    } else if (path[1] === 'mediaPause') {
-
-    } else if (path[1] === 'mediaRestart') {
-
-    } else if (path[1] === 'mediaStop') {
-
-    } else if (path[1] === 'refreshBrowser') {
-
-    } else if (path[0] === 'openProjector') {
-
-    } else if (path[0] === 'setStudioMode') {
-
-    } else if (path[0] === 'enableStudioMode') {
-
-    } else if (path[0] === 'disableStudioMode') {
-
-    } else if (path[0] === 'toggleStudioMode') {
-
-    } else if (path[0] === 'previewScene') {
-
-    } else if (path[0] === 'studioTransition') {
-
-    } else if (path[0] === 'setRecording') {
-
-    } else if (path[0] === 'startRecording') {
-
-    } else if (path[0] === 'stopRecording') {
-
-    } else if (path[0] === 'toggleRecording') {
-
-    } else if (path[0] === 'pauseRecording') {
-
-    } else if (path[0] === 'resumeRecording') {
-
-    } else if (path[0] === 'setStreaming') {
-
-    } else if (path[0] === 'startStreaming') {
-
-    } else if (path[0] === 'stopStreaming') {
-
-    } else if (path[0] === 'toggleStreaming') {
-
-    } else if (path[0] === 'setVirtualCam ') {
-
-    } else if (path[0] === 'startVirtualCam') {
-
-    } else if (path[0] === 'stopVirtualCam') {
-
-    } else if (path[0] === 'toggleVirtualCam') {
-
-    } else if (path[0] === 'setSceneCollection') {
-
-    } else if (path[0] === 'setProfile') {
-
-    } else if (path[0] === 'listOutputs') {
-
-    } else if (path[0] === 'startOutput') {
-
-    } else if (path[0] === 'stopOutput') {
-
-    } else if (path[0] === 'rename') {
-
-    } else if (path[0] === 'sendCC') {
-
-    } else if (path[0] === 'recFileName') {
-
-    } else if (path[1] === 'getTextFreetype') {
-
-    } else if (path[1] === 'getTextGDI') {
-
-    } else if (path[1] === 'activeSceneItemVisibility') {
-
-    } else if (path[2] === 'activeSceneItemVisibility') {
-
-    } else if (path[0] === 'takeScreenshot') {
-
-    } else if (path[0] === 'openExternal') {
-
-    } else if (path[0] === 'keypress') {
-        // Not implemented
-    } else if (path[0] === 'addSceneItem') {
-
-    } else if (path[0] === 'transOverrideType') {
-
-    } else if (path[0] === 'transOverrideDuration') {
-
-    } else if (path[0] === 'size') {
-
-    } else if (path[0] === 'move' || path[0] === 'movex' || path[0] === 'movey') {
-
-    } else if (path[0] === 'align') {
-
-    } else if (path[0] === 'spin') {
-
-    } else if (path[0] === 'fitToScreen') {
-
-    } else if (path[0] === 'duplicateCurrentScene') {
+    } else if (path[0] === 'misc') {
 
     } else {
         if (DEBUG) console.warn('Unknown message path:', path)
@@ -390,19 +295,129 @@ async function setOBSCurrentScene(scene, arg) {
     }
 }
 
+async function setSourceAudio(path, arg) {
+    if (!path[0]) {
+        if (!arg) {
+            getAudioSourceList()
+            return
+        }
+
+        if (DEBUG) console.info('setSourceAudio -- Use argement as scene to get volume from OBSWebSocket')
+        getSourceVolume(arg)
+        return
+    }
+
+    if (path[1] === 'volume') {
+        const source = path[0]
+        if (arg === undefined) {
+            console.info('setSourceAudio -- No argument given, get volume from OBSWebSocket')
+            getSourceVolume(source)
+            return
+        }
+
+        setSourceVolume(source, arg)
+    }
+}
+
+async function getAudioSourceList() {
+    try {
+        const response = await obs.send('GetSourceTypesList')
+        response.types.forEach(type => {
+            // if (DEBUG) console.info(`${type.displayName} - ${type.type} : ${type.typeId}:`, type.caps)
+            if (audioSourceList.has(type.typeId)) return
+            if (type.caps.hasAudio) {
+                audioSourceList.add(type.typeId)
+            }
+        })
+    } catch (e) {
+        if (DEBUG) console.error('getAudioSourceList -- Failed to get source type list:', e)
+        return
+    }
+
+    try {
+        const response = await obs.send('GetSourcesList')
+        if (DEBUG) console.info('Source list:', response)
+        const audioSource = []
+        response.sources.forEach(source => {
+            if (audioSourceList.has(source.typeId)) {
+                audioSource.push(source.name)
+            }
+        })
+
+        audioSource.sort()
+        if (DEBUG) console.info('Audio source list:', audioSource)
+        oscOut.send('/audio', audioSource)
+        return audioSource
+    } catch (e) {
+        if (DEBUG) console.error('getAudioSourceList -- Failed to get source list:', e)
+    }
+}
+
+
+async function getGlobalAudioSourceList() {
+    try {
+        const response = await obs.send('GetSourceTypesList')
+        response.types.forEach(type => {
+            if (audioSourceList.has(type.typeId)) return
+            if (type.caps.hasAudio) {
+                audioSourceList.add(type.typeId)
+            }
+        })
+    } catch (e) {
+        if (DEBUG) console.error('getGlobalAudioSourceList -- Failed to get source type list:', e)
+        return
+    }
+
+    try {
+        const response = await obs.send('GetSourcesList')
+        const globalAudioSource = []
+        const audioRegex = /^(\w+_){1,}(input|output)_capture$/
+        response.sources.forEach(source => {
+            if (audioSourceList.has(source.typeId) && source.typeId.match(audioRegex)) {
+                globalAudioSource.push(source.name)
+            }
+        })
+
+        globalAudioSource.sort()
+        // if (DEBUG) console.info('Glogal audio source list:', globalAudioSource)
+        // oscOut.send('/globalAudio', globalAudioSource)
+        return globalAudioSource
+    } catch (e) {
+        if (DEBUG) console.error('getGlobalAudioSourceList -- Failed to get source list:', e)
+    }
+}
+
+async function getSourceVolume(source) {
+    if (miscConfig.useDbForVolume) {
+        try {
+            const response = await obs.send('GetVolume', { source: source, useDecibel: true })
+            oscOut.send(`/audio/${source}/volume`, response.volume)
+        } catch (e) {
+            if (DEBUG) console.error(`getSourceVolume - Failed to get volume (dB) of source ${source}:`, e)
+        }
+    } else {
+        try {
+            const response = await obs.send('GetVolume', { source: source })
+            oscOut.send(`/audio/${source}/volume`, response.volume)
+        } catch (e) {
+            if (DEBUG) console.error(`getSourceVolume - Failed to get volume of source ${source}:`, e)
+        }
+    }
+}
+
 async function setSourceVolume(source, volume) {
     if (miscConfig.useDbForVolume) {
         const volumeDb = (volume * 100) - 100
         try {
-            await obs.send('SetVolume', { source: source, volume: volumeDb, useDecibel: true})
+            await obs.send('SetVolume', { source: source, volume: volumeDb, useDecibel: true })
         } catch (e) {
-            if (DEBUG) console.error('setSourceVolume - Failed to set volume (dB) for source:', source)
+            if (DEBUG) console.error(`setSourceVolume - Failed to set volume (dB) for source ${source}:`, e)
         }
     } else {
         try {
-            await obs.send('SetVolume', { source: source, volume: volume})
+            await obs.send('SetVolume', { source: source, volume: volume })
         } catch (e) {
-            if (DEBUG) console.error('setSourceVolume - Failed to set volume for source:', source)
+            if (DEBUG) console.error(`setSourceVolume - Failed to set volume for source ${source}:`, e)
         }
     }
 }
