@@ -213,6 +213,15 @@ async function setUpOBSWebSocketListener() {
             })
         }
     })
+
+    obs.on('SourceMuteStateChanged', (response) => {
+        const mutePath = `/audio/${response.sourceName}/mute`
+        try {
+            oscOut.send(mutePath, response.muted ? 1 : 0)
+        } catch (e) {
+            if (DEBUG) console.error(`xxx -- Failed to send mute state of source ${response.sourceName}:`, e)
+        }
+    })
 }
 
 async function processOSCInMessage(message) {
@@ -229,7 +238,7 @@ async function processOSCInMessage(message) {
     } else if (path[0] === 'source') {
 
     } else if (path[0] === 'audio') {
-        setSourceAudio(path.slice(1), message[1])
+        processSourceAudio(path.slice(1), message[1])
     } else if (path[0] === 'media') {
 
     } else if (path[0] === 'profile') {
@@ -295,7 +304,7 @@ async function setOBSCurrentScene(scene, arg) {
     }
 }
 
-async function setSourceAudio(path, arg) {
+async function processSourceAudio(path, arg) {
     if (!path[0]) {
         if (!arg) {
             getAudioSourceList()
@@ -316,6 +325,15 @@ async function setSourceAudio(path, arg) {
         }
 
         setSourceVolume(source, arg)
+    } else if (path[1] === 'mute') {
+        const source = path[0]
+        if (arg === undefined) {
+            console.info('setSourceAudio -- No argument given, get mute state from OBSWebSocket')
+            getSourceMuteState()
+            return
+        } else {
+            setSourceMuteState(source, arg)
+        }
     }
 }
 
@@ -388,17 +406,21 @@ async function getGlobalAudioSourceList() {
 }
 
 async function getSourceVolume(source) {
+    const volumePath = `/audio/${source}/volume`
+    const mutePath = `/audio/${source}/mute`
     if (miscConfig.useDbForVolume) {
         try {
             const response = await obs.send('GetVolume', { source: source, useDecibel: true })
-            oscOut.send(`/audio/${source}/volume`, response.volume)
+            oscOut.send(volumePath, response.volume)
+            oscOut.send(mutePath, response.muted ? 1 : 0)
         } catch (e) {
             if (DEBUG) console.error(`getSourceVolume - Failed to get volume (dB) of source ${source}:`, e)
         }
     } else {
         try {
             const response = await obs.send('GetVolume', { source: source })
-            oscOut.send(`/audio/${source}/volume`, response.volume)
+            oscOut.send(volumePath, response.volume)
+            oscOut.send(mutePath, response.muted ? 1 : 0)
         } catch (e) {
             if (DEBUG) console.error(`getSourceVolume - Failed to get volume of source ${source}:`, e)
         }
@@ -419,5 +441,27 @@ async function setSourceVolume(source, volume) {
         } catch (e) {
             if (DEBUG) console.error(`setSourceVolume - Failed to set volume for source ${source}:`, e)
         }
+    }
+}
+
+async function getSourceMuteState(source) {
+    const mutePath = `/audio/${source}/mute`
+    try {
+        const response = await obs.send('GetMute', { source: source })
+        try {
+            oscOut.send(mutePath, response.muted ? 1 : 0)
+        } catch (e) {
+            if (DEBUG) console.error(`getSourceMuteState -- Failed to send mute state of source ${source}:`, e)
+        }
+    } catch (e) {
+        if (DEBUG) console.error(`getSourceMuteState -- Failed to get mute state from scene ${source}:`, e)
+    }
+}
+
+async function setSourceMuteState(source, state) {
+    try {
+        await obs.send('SetMute', { source: source, mute: state ? true : false })
+    } catch {
+        if (DEBUG) console.error(`setSourceMuteState -- Failed to set mute state from scene ${source}:`, e)
     }
 }
