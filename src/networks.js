@@ -194,8 +194,6 @@ async function setUpOBSWebSocketListener() {
             sceneAudioSource.sort()
             if (DEBUG) console.info('Scene audio list:', sceneAudioSource)
             sceneAudioSource = [...globalAudioSource, ...sceneAudioSource]
-            // const sceneAudioPath = `/scene/${response.sceneName}/audio`
-            // const sceneAudioPath = `/sceneAudio/${response.sceneName}`
             const sceneAudioPath = `/sceneAudio`
             oscOut.send(sceneAudioPath, response.sceneName, sceneAudioSource)
         }
@@ -235,8 +233,13 @@ async function processOSCInMessage(message) {
 
     if (path[0] === 'scene') {
         setOBSCurrentScene(path[1], message[1])
+    } else if (path[0] === 'activeScene') {
+        if (message[1]) {
+            setOBSCurrentScene(path[1], message[1])
+        } else {
+            getCurrentScene()
+        }
     } else if (path[0] === 'source') {
-
     } else if (path[0] === 'audio') {
         processSourceAudio(path.slice(1), message[1])
     } else if (path[0] === 'media') {
@@ -353,10 +356,13 @@ async function getAudioSourceList() {
     }
 
     try {
-        const response = await obs.send('GetSourcesList')
-        if (DEBUG) console.info('Source list:', response)
+        const sourceList = await getSourceList()
+        if (!sourceList) {
+            if (DEBUG) console.error('getAudioSourceList -- No source list')
+            return
+        }
         const audioSource = []
-        response.sources.forEach(source => {
+        sourceList.forEach(source => {
             if (audioSourceList.has(source.typeId)) {
                 audioSource.push(source.name)
             }
@@ -383,14 +389,18 @@ async function getGlobalAudioSourceList() {
         })
     } catch (e) {
         if (DEBUG) console.error('getGlobalAudioSourceList -- Failed to get source type list:', e)
-        return
+        return []
     }
 
     try {
-        const response = await obs.send('GetSourcesList')
+        const sourceList = await getSourceList()
+        if (!sourceList) {
+            if (DEBUG) console.error('getGlobalAudioSourceList -- No source list')
+            return
+        }
         const globalAudioSource = []
         const audioRegex = /^(\w+_){1,}(input|output)_capture$/
-        response.sources.forEach(source => {
+        sourceList.forEach(source => {
             if (audioSourceList.has(source.typeId) && source.typeId.match(audioRegex)) {
                 globalAudioSource.push(source.name)
             }
@@ -403,6 +413,8 @@ async function getGlobalAudioSourceList() {
     } catch (e) {
         if (DEBUG) console.error('getGlobalAudioSourceList -- Failed to get source list:', e)
     }
+
+    return []
 }
 
 async function getSourceVolume(source) {
@@ -463,5 +475,48 @@ async function setSourceMuteState(source, state) {
         await obs.send('SetMute', { source: source, mute: state ? true : false })
     } catch {
         if (DEBUG) console.error(`setSourceMuteState -- Failed to set mute state from scene ${source}:`, e)
+    }
+}
+
+async function getSourceList() {
+    try {
+        const response = await obs.send('GetSourcesList')
+        return response.sources
+    } catch (e) {
+        if (DEBUG) console.error(`getSourceList -- Failed to get source list:`, e)
+        return null
+    }
+}
+
+async function getCurrentScene() {
+    const sceneAudioPath = `/sceneAudio`
+    try {
+        const response = await obs.send('GetCurrentScene')
+        try {
+            oscOut.send('/activeScene', response.name)
+        } catch (e) {
+            if (DEBUG) console.error('getCurrentScene -- Failed to sent current scene:', e)
+        }
+
+        let globalAudioSource = await getGlobalAudioSourceList()
+        let sceneAudioSource = []
+    
+        response.sources.forEach(source => {
+            // Note: Use source.type instead of source.typeId here, probably a typo in OSBWebSocket (or .js)
+            if (audioSourceList.has(source.type) && !globalAudioSource.includes(source.name)) {
+                sceneAudioSource.push(source.name)
+            }
+        })
+    
+        sceneAudioSource.sort()
+        // if (DEBUG) console.info('Scene audio list:', sceneAudioSource)
+        sceneAudioSource = [...globalAudioSource, ...sceneAudioSource]
+        try {
+            oscOut.send(sceneAudioPath, response.name, sceneAudioSource)
+        } catch (e) {
+            if (DEBUG) console.error('getCurrentScene -- Failed to sent current scene audio sources:', e)
+        }
+    } catch (e) {
+        if (DEBUG) console.error('getCurrentScene -- Failed to get current scene:', e)
     }
 }
