@@ -61,7 +61,7 @@ async function connectOBS(config) {
             const mainWindow = BrowserWindow.fromId(config.mainWindowId)
             if (mainWindow) {
                 mainWindow.webContents.send('disconnect:cancel')
-                if (DEBUG) console.warn('Connections canceled')
+                if (DEBUG) console.warn('Connections stopped/canceled')
             }
         }
     })
@@ -226,7 +226,7 @@ async function setUpOBSWebSocketListener() {
         try {
             oscOut.send(virtualCamPath, 1)
         } catch (e) {
-            if (DEBUG) console.error(`xxx -- Failed to send start state of virtual camera:`, e)
+            if (DEBUG) console.error(`xxx -- Failed to send started state of virtual camera:`, e)
         }
     })
 
@@ -235,7 +235,43 @@ async function setUpOBSWebSocketListener() {
         try {
             oscOut.send(virtualCamPath, 0)
         } catch (e) {
-            if (DEBUG) console.error(`xxx -- Failed to send stop state of virtual camera:`, e)
+            if (DEBUG) console.error(`xxx -- Failed to send stopped state of virtual camera:`, e)
+        }
+    })
+
+    obs.on('RecordingStarted', () => {
+        const recordingPath = `/recording`
+        try {
+            oscOut.send(recordingPath, 1)
+        } catch (e) {
+            if (DEBUG) console.error(`xxx -- Failed to send started state of recording:`, e)
+        }
+    })
+
+    obs.on('RecordingStopped', () => {
+        const recordingPath = `/recording`
+        try {
+            oscOut.send(recordingPath, 0)
+        } catch (e) {
+            if (DEBUG) console.error(`xxx -- Failed to send stopped state of recording:`, e)
+        }
+    })
+
+    obs.on('RecordingPaused', () => {
+        const recordingPausePath = `/recording/pause`
+        try {
+            oscOut.send(recordingPausePath, 1)
+        } catch (e) {
+            if (DEBUG) console.error(`xxx -- Failed to send paused state of recording:`, e)
+        }
+    })
+
+    obs.on('RecordingResumed', () => {
+        const recordingPath = `/recording/pause`
+        try {
+            oscOut.send(recordingPath, 0)
+        } catch (e) {
+            if (DEBUG) console.error(`xxx -- Failed to send resumed state of recording:`, e)
         }
     })
 }
@@ -270,8 +306,8 @@ async function processOSCInMessage(message) {
 
     } else if (path[0] === 'profile') {
 
-    } else if (path[0] === 'record') {
-
+    } else if (path[0] === 'recording') {
+        processRecording(path.slice(1), message.slice(1))
     } else if (path[0] === 'sceneCollection') {
 
     } else if (path[0] === 'stream') {
@@ -687,6 +723,116 @@ async function toggleVirtualCam() {
         if (DEBUG) console.error('toggleVirtualCam -- Failed to toggle virtual camera state:', e)
     }
 }
+
+async function processRecording(path, args) {
+    if (path[0] === undefined) {
+        if (args[0] === undefined) {
+            getRecordingStatus()
+            return
+        }
+
+        if (args[0] === 1) {
+            startRecording()
+        } else if (args[0] === 0) {
+            stopRecording()
+        }
+    } else {
+        if (path[0] === 'start' && args[0] === 1) {
+            startRecording()
+        } else if (path[0] === 'stop' && args[0] === 1) {
+            stopRecording()
+        } else if (path[0] === 'pause') {
+            if (args[0] === 1) {
+                pauseRecording()
+            } else if (args[0] === 0) {
+                resumeRecording()
+            }
+        } else if (path[0] === 'resume' && args[0] === 1) {
+            resumeRecording()
+        } else if (path[0] === 'toggle' && args[0] === 1) {
+            toggleRecording()
+        } else if (path[0] === 'togglePause' && args[0] === 1) {
+            togglePauseRecording()
+        }
+    }
+}
+
+async function getRecordingStatus() {
+    try {
+        const response = await obs.send('GetRecordingStatus')
+        try {
+            oscOut.send('/recording', response.isRecording ? 1 : 0)
+        } catch (e) {
+            if (DEBUG) console.error('getRecordingStatus -- Failed to send recording status:', e)
+        }
+    } catch (e) {
+        if (DEBUG) console.error('getRecordingStatus -- Failed to get recording status:', e)
+    }
+}
+
+async function startRecording() {
+    try {
+        await obs.send('StartRecording')
+    } catch (e) {
+        if (DEBUG) console.error('startRecording -- Failed to start recording:', e)
+    }
+}
+
+async function stopRecording() {
+    try {
+        await obs.send('StopRecording')
+    } catch (e) {
+        if (DEBUG) console.error('stopRecording -- Failed to stop recording:', e)
+    }
+}
+
+async function toggleRecording() {
+    try {
+        await obs.send('StartStopRecording')
+    } catch (e) {
+        if (DEBUG) console.error('toggleRecording -- Failed to toggle recording:', e)
+    }
+}
+
+async function pauseRecording() {
+    try {
+        await obs.send('PauseRecording')
+    } catch (e) {
+        if (DEBUG) console.error('pauseRecording -- Failed to pause recording:', e)
+    }
+}
+
+async function resumeRecording() {
+    try {
+        await obs.send('ResumeRecording')
+    } catch (e) {
+        if (DEBUG) console.error('resumeRecording -- Failed to resume recording:', e)
+    }
+}
+
+async function togglePauseRecording() {
+    try {
+        const response = await obs.send('GetRecordingStatus')
+        if (response.isRecording === false) {
+            if (DEBUG) console.error('togglePauseRecording -- Recording did not start yet')
+            return
+        }
+
+        try {
+            if (response.isRecordingPaused) {
+                await obs.send('ResumeRecording')
+            } else {
+                await obs.send('PauseRecording')
+            }
+        } catch (e) {
+            if (DEBUG) console.error('togglePauseRecording -- Failed to toggle-pause recording:', e)
+        }
+    } catch (e) {
+        if (DEBUG) console.error('togglePauseRecording -- Failed to get recording status:', e)
+    }
+}
+
+
 
 async function testFunction(path, args) {
     console.info(path, args)
