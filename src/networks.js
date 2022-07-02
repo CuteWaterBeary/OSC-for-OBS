@@ -220,6 +220,24 @@ async function setUpOBSWebSocketListener() {
             if (DEBUG) console.error(`xxx -- Failed to send mute state of source ${response.sourceName}:`, e)
         }
     })
+
+    obs.on('VirtualCamStarted', () => {
+        const virtualCamPath = `/virtualCam`
+        try {
+            oscOut.send(virtualCamPath, 1)
+        } catch (e) {
+            if (DEBUG) console.error(`xxx -- Failed to send start state of virtual camera:`, e)
+        }
+    })
+
+    obs.on('VirtualCamStopped', () => {
+        const virtualCamPath = `/virtualCam`
+        try {
+            oscOut.send(virtualCamPath, 0)
+        } catch (e) {
+            if (DEBUG) console.error(`xxx -- Failed to send stop state of virtual camera:`, e)
+        }
+    })
 }
 
 async function processOSCInMessage(message) {
@@ -263,7 +281,7 @@ async function processOSCInMessage(message) {
     } else if (path[0] === 'transition') {
 
     } else if (path[0] === 'virtualCam') {
-
+        processVirtualCam(path.slice(1), message.slice(1))
     } else if (path[0] === 'output') {
         processOutput(path.slice(1), message.slice(1))
     } else if (path[0] === 'misc') {
@@ -314,8 +332,8 @@ async function setOBSCurrentScene(scene, arg) {
 }
 
 async function processSourceAudio(path, arg) {
-    if (!path[0]) {
-        if (!arg) {
+    if (path[0] === undefined) {
+        if (arg === undefined) {
             getAudioSourceList()
             return
         }
@@ -528,7 +546,7 @@ async function getCurrentScene() {
 }
 
 async function processOutput(path, args) {
-    if (!path[0]) {
+    if (path[0] === undefined) {
         getOutputInfo(args[0])
         return
     }
@@ -547,15 +565,15 @@ async function getOutputList() {
     }
 }
 
-async function getOutputInfo(outputName) {
-    if (!outputName) {
+async function getOutputInfo(output) {
+    if (output === undefined) {
         getOutputList()
         return
     }
 
-    const outputPath = `/output/${outputName}`
+    const outputPath = `/output/${output}`
     try {
-        const response = await obs.send('GetOutputInfo', { outputName: outputName })
+        const response = await obs.send('GetOutputInfo', { outputName: output })
         oscOut.send(outputPath, response.outputInfo.active ? 1 : 0)
     } catch (e) {
         console.error('getOutputInfo -- Failed to get output info:', e)
@@ -565,7 +583,8 @@ async function getOutputInfo(outputName) {
 async function setOutputState(path, args) {
     if (path[1]) {
         if (path[1] === 'start' && args[0] === 1) startOutput(path[0])
-        if (path[1] === 'stop' && args[0] === 1) stopOutput(paht[0])
+        if (path[1] === 'stop' && args[0] === 1) stopOutput(path[0])
+        if (path[1] === 'toggle' && args[0] === 1) toggleOutput(path[0])
         return
     }
 
@@ -578,7 +597,7 @@ async function setOutputState(path, args) {
 
 async function startOutput(output) {
     try {
-        await obs.send('StartOutput', {outputName: output})
+        await obs.send('StartOutput', { outputName: output })
     } catch (e) {
         if (DEBUG) console.error(`startOutput -- Failed to start output ${output}`, e)
     }
@@ -586,9 +605,86 @@ async function startOutput(output) {
 
 async function stopOutput(output) {
     try {
-        await obs.send('StopOutput', {outputName: output})
+        await obs.send('StopOutput', { outputName: output })
     } catch (e) {
         if (DEBUG) console.error(`startOutput -- Failed to stop output ${output}`, e)
+    }
+}
+
+async function toggleOutput(output) {
+    try {
+        const response = await obs.send('GetOutputInfo', { outputName: output })
+        try {
+            if (response.outputInfo.active === true) {
+                await obs.send('StopOutput', { outputName: output })
+            } else {
+                await obs.send('StartOutput', { outputName: output })
+            }
+        } catch (e) {
+            if (DEBUG) console.error(`toggleOutput -- Failed to toggle output ${output}`, e)
+        }
+    } catch (e) {
+        console.error('toggleOutput -- Failed to get output info:', e)
+    }
+}
+
+async function processVirtualCam(path, args) {
+    if (path[0] === undefined) {
+        if (args[0] === undefined) {
+            getVirtualCamStatus()
+            return
+        }
+
+        if (args[0] === 1) {
+            startVirtualCam()
+        } else if (args[0] === 0) {
+            stopVirtualCam()
+        }
+    } else {
+        if (path[0] === 'start' && args[0] === 1) {
+            startVirtualCam()
+        } else if (path[0] === 'stop' && args[0] === 1) {
+            stopVirtualCam()
+        } else if (path[0] === 'toggle' && args[0] === 1) {
+            toggleVirtualCam()
+        }
+    }
+}
+
+async function getVirtualCamStatus() {
+    try {
+        const response = await obs.send('GetVirtualCamStatus')
+        try {
+            oscOut.send('/virtualCam', (response.virtualCamTimecode === undefined) ? 0 : 1)
+        } catch (e) {
+            if (DEBUG) console.error('getVirtualCamStatus -- Failed to send virtual camera status:', e)
+        }
+    } catch (e) {
+        if (DEBUG) console.error('getVirtualCamStatus -- Failed to get virtual camera status:', e)
+    }
+}
+
+async function startVirtualCam() {
+    try {
+        await obs.send('StartVirtualCam')
+    } catch (e) {
+        if (DEBUG) console.error('startVirtualCam -- Failed to start virtual camera:', e)
+    }
+}
+
+async function stopVirtualCam() {
+    try {
+        await obs.send('StopVirtualCam')
+    } catch (e) {
+        if (DEBUG) console.error('stopVirtualCam -- Failed to stop virtual camera:', e)
+    }
+}
+
+async function toggleVirtualCam() {
+    try {
+        await obs.send('StartStopVirtualCam')
+    } catch (e) {
+        if (DEBUG) console.error('toggleVirtualCam -- Failed to toggle virtual camera state:', e)
     }
 }
 
