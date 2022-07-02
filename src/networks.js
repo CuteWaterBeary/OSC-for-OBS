@@ -192,8 +192,8 @@ async function setUpOBSWebSocketListener() {
             })
 
             sceneAudioSource.sort()
-            if (DEBUG) console.info('Scene audio list:', sceneAudioSource)
             sceneAudioSource = [...globalAudioSource, ...sceneAudioSource]
+            if (DEBUG) console.info('Scene audio list:', sceneAudioSource)
             const sceneAudioPath = `/sceneAudio`
             oscOut.send(sceneAudioPath, response.sceneName, sceneAudioSource)
         }
@@ -231,6 +231,12 @@ async function processOSCInMessage(message) {
     const path = message[0].split('/')
     path.shift()
 
+    if (path[0] === 'test') {
+        if (DEBUG) console.info('processOSCInMessage -- Test function triggered')
+        testFunction(path.slice(1), message.slice(1))
+        return
+    }
+
     if (path[0] === 'scene') {
         setOBSCurrentScene(path[1], message[1])
     } else if (path[0] === 'activeScene') {
@@ -259,7 +265,7 @@ async function processOSCInMessage(message) {
     } else if (path[0] === 'virtualCam') {
 
     } else if (path[0] === 'output') {
-
+        processOutput(path.slice(1), message.slice(1))
     } else if (path[0] === 'misc') {
 
     } else {
@@ -500,14 +506,14 @@ async function getCurrentScene() {
 
         let globalAudioSource = await getGlobalAudioSourceList()
         let sceneAudioSource = []
-    
+
         response.sources.forEach(source => {
             // Note: Use source.type instead of source.typeId here, probably a typo in OSBWebSocket (or .js)
             if (audioSourceList.has(source.type) && !globalAudioSource.includes(source.name)) {
                 sceneAudioSource.push(source.name)
             }
         })
-    
+
         sceneAudioSource.sort()
         // if (DEBUG) console.info('Scene audio list:', sceneAudioSource)
         sceneAudioSource = [...globalAudioSource, ...sceneAudioSource]
@@ -519,4 +525,73 @@ async function getCurrentScene() {
     } catch (e) {
         if (DEBUG) console.error('getCurrentScene -- Failed to get current scene:', e)
     }
+}
+
+async function processOutput(path, args) {
+    if (!path[0]) {
+        getOutputInfo(args[0])
+        return
+    }
+
+    setOutputState(path, args)
+}
+
+async function getOutputList() {
+    try {
+        const response = await obs.send('ListOutputs')
+        const outputList = []
+        response.outputs.forEach(output => { outputList.push(output.name) })
+        oscOut.send('/outputList', outputList)
+    } catch (e) {
+        console.error('getOutputInfo -- Failed to get output list:', e)
+    }
+}
+
+async function getOutputInfo(outputName) {
+    if (!outputName) {
+        getOutputList()
+        return
+    }
+
+    const outputPath = `/output/${outputName}`
+    try {
+        const response = await obs.send('GetOutputInfo', { outputName: outputName })
+        oscOut.send(outputPath, response.outputInfo.active ? 1 : 0)
+    } catch (e) {
+        console.error('getOutputInfo -- Failed to get output info:', e)
+    }
+}
+
+async function setOutputState(path, args) {
+    if (path[1]) {
+        if (path[1] === 'start' && args[0] === 1) startOutput(path[0])
+        if (path[1] === 'stop' && args[0] === 1) stopOutput(paht[0])
+        return
+    }
+
+    if (args[0] === 1) {
+        startOutput(path[0])
+    } else {
+        stopOutput(path[0])
+    }
+}
+
+async function startOutput(output) {
+    try {
+        await obs.send('StartOutput', {outputName: output})
+    } catch (e) {
+        if (DEBUG) console.error(`startOutput -- Failed to start output ${output}`, e)
+    }
+}
+
+async function stopOutput(output) {
+    try {
+        await obs.send('StopOutput', {outputName: output})
+    } catch (e) {
+        if (DEBUG) console.error(`startOutput -- Failed to stop output ${output}`, e)
+    }
+}
+
+async function testFunction(path, args) {
+    console.info(path, args)
 }
