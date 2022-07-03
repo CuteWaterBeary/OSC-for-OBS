@@ -11,7 +11,7 @@ let oscIn
 let oscOut
 
 let miscConfig = {}
-let isClosedManually = true
+let isConnectionClosedManually = true
 
 let audioSourceList = new Set()
 
@@ -44,7 +44,7 @@ async function connectOBS(config) {
 
     obs.on('ConnectionClosed', async () => {
         if (DEBUG) console.info('OBSWebSocket is closed')
-        if (!isClosedManually) {
+        if (!isConnectionClosedManually) {
             async function reconnectOBS(config) {
                 try {
                     if (DEBUG) console.info('Reconnecting OBSWebSocket...')
@@ -67,7 +67,7 @@ async function connectOBS(config) {
     })
 
     if (config.autoReconnect) {
-        isClosedManually = false
+        isConnectionClosedManually = false
     }
     if (DEBUG) console.info('Connecting OBSWebSocket...Succeeded')
     return { result: true }
@@ -86,7 +86,7 @@ async function disconnectOBS() {
     }
 
     obs = null
-    isClosedManually = true
+    isConnectionClosedManually = true
     if (DEBUG) console.info('Disconnecting OBSWebSocket...Succeeded')
 }
 
@@ -274,6 +274,24 @@ async function setUpOBSWebSocketListener() {
             if (DEBUG) console.error(`xxx -- Failed to send resumed state of recording:`, e)
         }
     })
+
+    obs.on('StudioModeSwitched', (response) => {
+        const studioPath = `/studio`
+        try {
+            oscOut.send(studioPath, response['new-state'] ? 1 : 0)
+        } catch (e) {
+            if (DEBUG) console.error(`xxx -- Failed to send studio mode state:`, e)
+        }
+    })
+
+    obs.on('PreviewSceneChanged', (response) => {
+        const previewPath = `/studio/preview`
+        try {
+            oscOut.send(previewPath, response['scene-name'])
+        } catch (e) {
+            if (DEBUG) console.error(`xxx -- Failed to send current preview scene:`, e)
+        }
+    })
 }
 
 async function processOSCInMessage(message) {
@@ -313,7 +331,7 @@ async function processOSCInMessage(message) {
     } else if (path[0] === 'stream') {
 
     } else if (path[0] === 'studio') {
-
+        processStudioMode(path.slice(1), message.slice(1))
     } else if (path[0] === 'transition') {
 
     } else if (path[0] === 'virtualCam') {
@@ -832,7 +850,120 @@ async function togglePauseRecording() {
     }
 }
 
+async function processStudioMode(path, args) {
+    if (path[0] === undefined) {
+        if (args[0] === undefined) {
+            getStudioModeStatus()
+            return
+        }
 
+        if (args[0] === 1) {
+            enableStudioMode()
+        } else if (args[0] === 0) {
+            disableStudioMode()
+        }
+    } else {
+        if (path[0] === 'enable' && args[0] === 1) {
+            enableStudioMode()
+        } else if (path[0] === 'disable' && args[0] === 1) {
+            disableStudioMode()
+        } else if (path[0] === 'toggle' && args[0] === 1) {
+            toggleStudioMode()
+        } else if (path[0] === 'preview') {
+            if (args[0] === undefined) {
+                getPreviewScene()
+            } else {
+                setPreviewScene(args[0])
+            }
+        } else if (path[0] === 'transition') {
+            transitionToProgram(args)
+        }
+    }
+}
+
+async function getStudioModeStatus() {
+    try {
+        const response = await obs.send('GetStudioModeStatus')
+        try {
+            oscOut.send('/studio', response['studio-mode'] ? 1 : 0)
+        } catch (e) {
+            if (DEBUG) console.error('getStudioModeStatus -- Failed to send studio mode status:', e)
+        }
+    } catch (e) {
+        if (DEBUG) console.error('getStudioModeStatus -- Failed to get studio mode status:', e)
+    }
+}
+
+async function enableStudioMode() {
+    try {
+        await obs.send('EnableStudioMode')
+    } catch (e) {
+        if (DEBUG) console.error('enableStudioMode -- Failed to enable studio mode:', e)
+    }
+}
+
+async function disableStudioMode() {
+    try {
+        await obs.send('DisableStudioMode')
+    } catch (e) {
+        if (DEBUG) console.error('disableStudioMode -- Failed to disable studio mode:', e)
+    }
+}
+
+async function toggleStudioMode() {
+    try {
+        await obs.send('ToggleStudioMode')
+    } catch (e) {
+        if (DEBUG) console.error('toggleStudioMode -- Failed to toggle studio mode:', e)
+    }
+}
+
+async function getPreviewScene() {
+    try {
+        const response = await obs.send('GetPreviewScene')
+        try {
+            oscOut.send('/studio/preview', response.name)
+        } catch (e) {
+            if (DEBUG) console.error('getPreviewScene -- Failed to send preview scene:', e)
+        }
+    } catch (e) {
+        if (DEBUG) console.error('getPreviewScene -- Failed to get preview scene:', e)
+    }
+}
+
+async function setPreviewScene(scene) {
+    try {
+        await obs.send('SetPreviewScene', { 'scene-name': scene })
+    } catch (e) {
+        if (DEBUG) console.error('setPreviewScene -- Failed to set preview scene:', e)
+    }
+}
+
+async function transitionToProgram(args) {
+    if (args[0] === undefined) {
+        return
+    }
+
+    if (typeof(args[0]) === 'number') {
+        if (args[0] !== 1) {
+            return
+        }
+
+        try {
+            await obs.send('TransitionToProgram')
+        } catch (e) {
+            if (DEBUG) console.error('transitionToProgram -- Failed to start transition:', e)
+        }
+    } else if (typeof (args[0]) === 'string') {
+        try {
+            await obs.send('TransitionToProgram', { 'with-transition': { name: args[0], ...(typeof (args[1]) === 'number' ? { duration: args[1] } : {}) } })
+        } catch (e) {
+            if (DEBUG) console.error('transitionToProgram -- Failed to start transition:', e)
+        }
+    } else {
+        if (DEBUG) console.error('transitionToProgram -- Invalid arguments:', args)
+    }
+}
 
 async function testFunction(path, args) {
     console.info(path, args)
