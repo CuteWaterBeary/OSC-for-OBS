@@ -157,8 +157,7 @@ async function setUpOBSWebSocketListener() {
     obs.on('TransitionBegin', (response) => {
         if (miscConfig.notifyActiveScene) {
             if (miscConfig.useCustomPath && miscConfig.useCustomPath.enabled === true) {
-                const sceneName = response.toScene.replaceAll(' ', '_')
-                const customPath = `/${miscConfig.useCustomPath.prefix}/${sceneName}${(miscConfig.useCustomPath.suffix !== '') ? '/' + miscConfig.useCustomPath.suffix : ''}`
+                const customPath = `/${miscConfig.useCustomPath.prefix}/${response.toScene}${(miscConfig.useCustomPath.suffix !== '') ? '/' + miscConfig.useCustomPath.suffix : ''}`
                 oscOut.send(customPath, 1, () => {
                     if (DEBUG) console.info('Active scene changes (custom path)')
                 })
@@ -310,16 +309,16 @@ async function processOSCInMessage(message) {
     }
 
     if (path[0] === 'scene') {
-        setOBSCurrentScene(path[1], message[1])
+        processScene(path.slice(1), message.slice(1))
     } else if (path[0] === 'activeScene') {
         if (message[1]) {
-            setOBSCurrentScene(path[1], message[1])
+            setCurrentScene(message[1])
         } else {
             getCurrentScene()
         }
     } else if (path[0] === 'source') {
     } else if (path[0] === 'audio') {
-        processSourceAudio(path.slice(1), message[1])
+        processSourceAudio(path.slice(1), message.slice(1))
     } else if (path[0] === 'media') {
 
     } else if (path[0] === 'profile') {
@@ -345,99 +344,121 @@ async function processOSCInMessage(message) {
     }
 }
 
-async function setOBSCurrentScene(scene, arg) {
-    if (scene && arg === 0) {
-        if (DEBUG) console.info('setOBSCurrentScene - Do nothing')
+async function processScene(path, args) {
+    if (path[0] === undefined) {
+        if (args[0] === undefined) {
+            getCurrentScene()
+        } else {
+            setCurrentScene(args[0])
+        }
         return
     }
 
-    let sceneName
-    if (scene) {
-        sceneName = scene.replaceAll('_', ' ')
-    } else {
-        if (typeof (arg) === 'string') {
-            sceneName = arg.replaceAll('_', ' ')
-        } else if (typeof (arg) === 'number') {
-            try {
-                const sceneList = await obs.send('GetSceneList')
-                if (!sceneList['scenes'][arg]) {
-                    if (DEBUG) console.warn('setOBSCurrentScene - Invalid scene index:', arg)
-                    return
-                }
+    setCurrentScene(path[0])
+}
 
-                sceneName = sceneList['scenes'][arg]['name']
-            } catch (e) {
-                if (DEBUG) console.error('setOBSCurrentScene - Cannot get scene list')
-                return
-            }
-        } else {
-            if (DEBUG) console.error('setOBSCurrentScene - Invalid argument:', arg)
-            return
-        }
-    }
-
-    if (DEBUG) console.error('setOBSCurrentScene - Trying to change to scene:', sceneName)
-
+async function getCurrentScene() {
+    const sceneAudioPath = `/sceneAudio`
     try {
-        await obs.send('SetCurrentScene', { 'scene-name': sceneName })
+        const response = await obs.send('GetCurrentScene')
+        try {
+            oscOut.send('/activeScene', response.name)
+        } catch (e) {
+            if (DEBUG) console.error('getCurrentScene -- Failed to sent current scene:', e)
+        }
+
+        let globalAudioSource = await getGlobalAudioSourceList()
+        let sceneAudioSource = []
+
+        response.sources.forEach(source => {
+            // Note: Use source.type instead of source.typeId here, probably a typo in OSBWebSocket (or .js)
+            if (audioSourceList.has(source.type) && !globalAudioSource.includes(source.name)) {
+                sceneAudioSource.push(source.name)
+            }
+        })
+
+        sceneAudioSource.sort()
+        // if (DEBUG) console.info('Scene audio list:', sceneAudioSource)
+        sceneAudioSource = [...globalAudioSource, ...sceneAudioSource]
+        try {
+            oscOut.send(sceneAudioPath, response.name, sceneAudioSource)
+        } catch (e) {
+            if (DEBUG) console.error('getCurrentScene -- Failed to sent current scene audio sources:', e)
+        }
     } catch (e) {
-        if (DEBUG) console.error(`setOBSCurrentScene - Failed to set scene ${sceneName}:`, e)
+        if (DEBUG) console.error('getCurrentScene -- Failed to get current scene:', e)
     }
 }
 
-async function processSourceAudio(path, arg) {
-    if (path[0] === undefined) {
-        if (arg === undefined) {
-            getAudioSourceList()
+async function setCurrentScene(scene) {
+    if (typeof (scene) === 'number') {
+        const sceneList = await getSceneList(false)
+        if (!sceneList) return
+        if (sceneList[scene] === undefined) {
+            if (DEBUG) console.error('SetCurrentScene - Invalid scene index:', scene)
             return
         }
 
-        if (DEBUG) console.info('setSourceAudio -- Use argement as scene to get volume from OBSWebSocket')
-        getSourceVolume(arg)
+        scene = sceneList[scene]['name']
+    }
+
+    try {
+        await obs.send('SetCurrentScene', { 'scene-name': scene })
+    } catch (e) {
+        if (DEBUG) console.error(`SetCurrentScene - Failed to set scene ${scene}:`, e)
+    }
+}
+
+async function getSceneList(sendOSC = true) {
+    const sceneListPath = '/sceneList'
+    try {
+        const response = await obs.send('GetSceneList')
+        if (sendOSC) {
+            try {
+                oscOut.send(sceneListPath, response.scenes)
+            } catch (e) {
+                if (DEBUG) console.error('getSceneList -- Failed to send scene list:', e)
+            }
+        }
+        return response.scenes
+    } catch (e) {
+        if (DEBUG) console.error('getSceneList -- Failed to get scene list:', e)
+    }
+}
+
+async function processSourceAudio(path, args) {
+    if (path[0] === undefined) {
+        if (args[0] === undefined) {
+            getAudioSourceList()
+        } else {
+            getSourceVolume(args[0])
+        }
         return
     }
 
     if (path[1] === 'volume') {
-        const source = path[0]
-        if (arg === undefined) {
-            console.info('setSourceAudio -- No argument given, get volume from OBSWebSocket')
-            getSourceVolume(source)
-            return
-        }
-
-        setSourceVolume(source, arg)
-    } else if (path[1] === 'mute') {
-        const source = path[0]
-        if (arg === undefined) {
-            console.info('setSourceAudio -- No argument given, get mute state from OBSWebSocket')
-            getSourceMuteState()
-            return
+        if (args === undefined) {
+            getSourceVolume(path[0])
         } else {
-            setSourceMuteState(source, arg)
+            setSourceVolume(path[0], args[0])
+        }
+    } else if (path[1] === 'mute') {
+        if (args === undefined) {
+            getSourceMuteState()
+        } else {
+            setSourceMuteState(path[0], args[0])
         }
     }
 }
 
-async function getAudioSourceList() {
-    try {
-        const response = await obs.send('GetSourceTypesList')
-        response.types.forEach(type => {
-            // if (DEBUG) console.info(`${type.displayName} - ${type.type} : ${type.typeId}:`, type.caps)
-            if (audioSourceList.has(type.typeId)) return
-            if (type.caps.hasAudio) {
-                audioSourceList.add(type.typeId)
-            }
-        })
-    } catch (e) {
-        if (DEBUG) console.error('getAudioSourceList -- Failed to get source type list:', e)
-        return
-    }
+async function getAudioSourceList(sendOSC = true) {
+    updateAudioSourceList()
 
     try {
-        const sourceList = await getSourceList()
+        const sourceList = await getSourceList(false)
         if (!sourceList) {
             if (DEBUG) console.error('getAudioSourceList -- No source list')
-            return
+            return []
         }
         const audioSource = []
         sourceList.forEach(source => {
@@ -447,34 +468,28 @@ async function getAudioSourceList() {
         })
 
         audioSource.sort()
-        if (DEBUG) console.info('Audio source list:', audioSource)
-        oscOut.send('/audio', audioSource)
+        // if (DEBUG) console.info('Audio source list:', audioSource)
+        if (sendOSC) {
+            try {
+                oscOut.send('/audio', audioSource)
+            } catch (e) {
+                if (DEBUG) console.error('getAudioSourceList -- Failed to send audio source list:', e)
+            }
+        }
         return audioSource
     } catch (e) {
         if (DEBUG) console.error('getAudioSourceList -- Failed to get source list:', e)
     }
 }
 
-
-async function getGlobalAudioSourceList() {
-    try {
-        const response = await obs.send('GetSourceTypesList')
-        response.types.forEach(type => {
-            if (audioSourceList.has(type.typeId)) return
-            if (type.caps.hasAudio) {
-                audioSourceList.add(type.typeId)
-            }
-        })
-    } catch (e) {
-        if (DEBUG) console.error('getGlobalAudioSourceList -- Failed to get source type list:', e)
-        return []
-    }
+async function getGlobalAudioSourceList(sendOSC = true) {
+    updateAudioSourceList()
 
     try {
-        const sourceList = await getSourceList()
+        const sourceList = await getSourceList(false)
         if (!sourceList) {
             if (DEBUG) console.error('getGlobalAudioSourceList -- No source list')
-            return
+            return []
         }
         const globalAudioSource = []
         const audioRegex = /^(\w+_){1,}(input|output)_capture$/
@@ -486,13 +501,33 @@ async function getGlobalAudioSourceList() {
 
         globalAudioSource.sort()
         // if (DEBUG) console.info('Glogal audio source list:', globalAudioSource)
-        // oscOut.send('/globalAudio', globalAudioSource)
+        if (sendOSC) {
+            try {
+                oscOut.send('/globalAudio', globalAudioSource)
+            } catch (e) {
+                if (DEBUG) console.error('getGlobalAudioSourceList -- Failed to send global audio source list:', e)
+            }
+        }
         return globalAudioSource
     } catch (e) {
         if (DEBUG) console.error('getGlobalAudioSourceList -- Failed to get source list:', e)
     }
 
     return []
+}
+
+async function updateAudioSourceList() {
+    try {
+        const response = await obs.send('GetSourceTypesList')
+        response.types.forEach(type => {
+            if (audioSourceList.has(type.typeId)) return
+            if (type.caps.hasAudio) {
+                audioSourceList.add(type.typeId)
+            }
+        })
+    } catch (e) {
+        if (DEBUG) console.error('updateAudioSourceList -- Failed to get source type list:', e)
+    }
 }
 
 async function getSourceVolume(source) {
@@ -556,46 +591,21 @@ async function setSourceMuteState(source, state) {
     }
 }
 
-async function getSourceList() {
+async function getSourceList(sendOSC = true) {
+    const sourceListPath = '/sourceList'
     try {
         const response = await obs.send('GetSourcesList')
+        if (sendOSC) {
+            try {
+                oscOut.send(sourceListPath, response.sources)
+            } catch (e) {
+                if (DEBUG) console.error('getSourceList -- Failed to send source list:', e)
+            }
+        }
         return response.sources
     } catch (e) {
         if (DEBUG) console.error(`getSourceList -- Failed to get source list:`, e)
         return null
-    }
-}
-
-async function getCurrentScene() {
-    const sceneAudioPath = `/sceneAudio`
-    try {
-        const response = await obs.send('GetCurrentScene')
-        try {
-            oscOut.send('/activeScene', response.name)
-        } catch (e) {
-            if (DEBUG) console.error('getCurrentScene -- Failed to sent current scene:', e)
-        }
-
-        let globalAudioSource = await getGlobalAudioSourceList()
-        let sceneAudioSource = []
-
-        response.sources.forEach(source => {
-            // Note: Use source.type instead of source.typeId here, probably a typo in OSBWebSocket (or .js)
-            if (audioSourceList.has(source.type) && !globalAudioSource.includes(source.name)) {
-                sceneAudioSource.push(source.name)
-            }
-        })
-
-        sceneAudioSource.sort()
-        // if (DEBUG) console.info('Scene audio list:', sceneAudioSource)
-        sceneAudioSource = [...globalAudioSource, ...sceneAudioSource]
-        try {
-            oscOut.send(sceneAudioPath, response.name, sceneAudioSource)
-        } catch (e) {
-            if (DEBUG) console.error('getCurrentScene -- Failed to sent current scene audio sources:', e)
-        }
-    } catch (e) {
-        if (DEBUG) console.error('getCurrentScene -- Failed to get current scene:', e)
     }
 }
 
@@ -944,7 +954,7 @@ async function transitionToProgram(args) {
         return
     }
 
-    if (typeof(args[0]) === 'number') {
+    if (typeof (args[0]) === 'number') {
         if (args[0] !== 1) {
             return
         }
