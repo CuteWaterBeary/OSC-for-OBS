@@ -5,6 +5,11 @@ const { Client, Server } = require('node-osc')
 module.exports = { connectOBS, disconnectOBS, connectOSC, disconnectOSC, setUpOBSOSC, syncMiscConfig }
 
 const DEBUG = process.argv.includes('--enable-log')
+const keywords = {
+    scene: [],
+    source: [],
+    sceneItem: ['property', 'show', 'hide', 'reset']
+}
 
 let obs
 let oscIn
@@ -317,6 +322,9 @@ async function processOSCInMessage(message) {
             getCurrentScene()
         }
     } else if (path[0] === 'source') {
+        processSource(path.slice(1), message.slice(1))
+    } else if (path[0] === 'sceneItem') {
+        processSceneItem(path.slice(1), message.slice(1))
     } else if (path[0] === 'audio') {
         processSourceAudio(path.slice(1), message.slice(1))
     } else if (path[0] === 'media') {
@@ -339,8 +347,14 @@ async function processOSCInMessage(message) {
         processOutput(path.slice(1), message.slice(1))
     } else if (path[0] === 'misc') {
 
+    } else if (path[0] === 'sceneAudio') {
+
+    } else if (path[0] === 'sceneSource') {
+
+    } else if (path[0] === 'misc') {
+
     } else {
-        if (DEBUG) console.warn('Unknown message path:', path)
+        if (DEBUG) console.warn('Unknown message path:', path.join('/'))
     }
 }
 
@@ -592,12 +606,13 @@ async function setSourceMuteState(source, state) {
 }
 
 async function getSourceList(sendOSC = true) {
-    const sourceListPath = '/sourceList'
+    const sourceListPath = '/source'
     try {
         const response = await obs.send('GetSourcesList')
         if (sendOSC) {
+            const sourceList = response.sources.flatMap((source) => source.name)
             try {
-                oscOut.send(sourceListPath, response.sources)
+                oscOut.send(sourceListPath, sourceList)
             } catch (e) {
                 if (DEBUG) console.error('getSourceList -- Failed to send source list:', e)
             }
@@ -625,7 +640,7 @@ async function getOutputList() {
         response.outputs.forEach(output => { outputList.push(output.name) })
         oscOut.send('/outputList', outputList)
     } catch (e) {
-        console.error('getOutputInfo -- Failed to get output list:', e)
+        if (DEBUG) console.error('getOutputInfo -- Failed to get output list:', e)
     }
 }
 
@@ -640,7 +655,7 @@ async function getOutputInfo(output) {
         const response = await obs.send('GetOutputInfo', { outputName: output })
         oscOut.send(outputPath, response.outputInfo.active ? 1 : 0)
     } catch (e) {
-        console.error('getOutputInfo -- Failed to get output info:', e)
+        if (DEBUG) console.error('getOutputInfo -- Failed to get output info:', e)
     }
 }
 
@@ -688,7 +703,7 @@ async function toggleOutput(output) {
             if (DEBUG) console.error(`toggleOutput -- Failed to toggle output ${output}`, e)
         }
     } catch (e) {
-        console.error('toggleOutput -- Failed to get output info:', e)
+        if (DEBUG) console.error('toggleOutput -- Failed to get output info:', e)
     }
 }
 
@@ -975,6 +990,354 @@ async function transitionToProgram(args) {
     }
 }
 
+async function processSource(path, args) {
+    if (path[0] === undefined) {
+        if (args[0] === undefined) {
+            getSourceList()
+        } else {
+            // Note: Might be removed later
+            getSourceActive(args[0])
+        }
+        return
+    }
+
+    // TODO: Change path from source/[source]/[setting] to source/[source]/setting/[setting]
+    if (path[1] === undefined && DEBUG) {
+        getSourceSettings(path[0])
+        return
+    } else {
+        if (args[0] === undefined) {
+            getSourceSetting(path[0], path[1])
+        } else {
+            setSourceSetting(path[0], path[1], args[0])
+        }
+    }
+}
+
+async function getSourceActive(source) {
+    const sourceActivePath = `/scene/${source}/active`
+    try {
+        const response = await obs.send('GetSourceActive', { sourceName: source })
+        try {
+            oscOut.send(sourceActivePath, response.sourceActive ? 1 : 0)
+        } catch (e) {
+            if (DEBUG) console.error('getSourceActive -- Failed to send source active status:', e)
+        }
+    } catch (e) {
+        if (DEBUG) console.error('getSourceActive -- Failed to get source active status:', e)
+    }
+}
+
+async function getSourceSettings(source, sourceType) {
+    try {
+        const response = await obs.send('GetSourceSettings', { sourceName: source, ...(sourceType !== undefined ? { sourceType: sourceType } : {}) })
+        if (DEBUG) console.info(`${response.sourceName} - ${response.sourceType}:`, response.sourceSettings)
+        return response.sourceSettings
+    } catch (e) {
+        if (DEBUG) console.error('getSourceSettings -- Failed to get source settings:', e)
+    }
+}
+
+async function getSourceSetting(source, setting) {
+    const sourceSettingPath = `/source/${source}/${setting}`
+    const sourceSettings = getSourceSettings(source)
+    if (!sourceSettings) { return }
+    if (sourceSettings[setting] === undefined) {
+        if (DEBUG) console.error('getSourceSetting -- No matched setting name:', setting)
+        return
+    }
+
+    try {
+        oscOut.send(sourceSettingPath, sourceSettings[setting])
+    } catch (e) {
+        if (DEBUG) console.error(`getSourceSetting -- Failed to send source setting ${setting}:`, e)
+    }
+}
+
+async function setSourceSetting(source, setting, value, sourceType) {
+    const sourceSettings = getSourceSettings(source)
+    if (!sourceSettings) { return }
+    // Note: Due to how OBSWebSocket work, settings might not show up
+    //       until it's been changed at least once in OBS
+    // if (sourceSettings[setting] === undefined) {
+    //     if (DEBUG) console.error('setSourceSetting -- No matched setting name', setting)
+    //     return
+    // }
+
+    sourceSettings[setting] = value
+    try {
+        const response = await obs.send('SetSourceSettings', { sourceName: source, sourceSettings: sourceSettings, ...(sourceType !== undefined ? { sourceType: sourceType } : {}) })
+    } catch (e) {
+        if (DEBUG) console.error('getSourceSettings -- Failed to set source setting:', e)
+    }
+}
+
+async function processSceneItem(path, args) {
+    if (path[0] === undefined) {
+        getSceneItemList(args[0])
+        return
+    }
+
+    // if (path[1] === undefined) {
+    //     // Might be removed later
+    //     getSceneItemProperties(path)
+    //     return
+    // }
+
+    // if (args[0] === undefined) {
+    //     getSceneItemProperties(path)
+    // }
+
+    // path: [scene]/[source|group/source]/[property|show|reset]
+
+    for (let i = 1; i < 4; i++) {
+        if (path[i] === undefined) { return }
+        if (keywords.sceneItem.includes(path[i])) {
+            if (path[i] === 'property') {
+                if (path[i + 1] === undefined) {
+                    getSceneItemProperties(path.slice(0, i))
+                    return
+                }
+
+                if (args[0] === undefined) {
+                    getSceneItemProperty(path.slice(0, i), path.slice(i + 1))
+                } else {
+                    setSceneItemProperty(path.slice(0, i), path.slice(i + 1), args)
+                }
+            } else if (path[i] === 'show') {
+                if (args[0] === 1 || args[0] === 0) {
+                    setSceneItemRender(path.slice(0, i), args[0])
+                }
+            } else if (path[i] === 'hide' && args[0] === 1) {
+                setSceneItemRender(path.slice(0, i), 0)
+            } else if (path[i] === 'reset' && args[0] === 1) {
+                resetSceneItem(path.slice(0, i))
+            } else {
+                if (DEBUG) console.error('processSceneItem -- Invalid command:', path[i])
+                return
+            }
+        }
+    }
+}
+
+async function getSceneItemList(scene, sendOSC = true) {
+    const sceneItemListPath = '/sceneItem'
+    try {
+        const response = await obs.send('GetSceneItemList', scene !== undefined ? { sceneName: scene } : undefined)
+        if (sendOSC) {
+            const sceneItemList = response.sceneItems.flatMap(sceneItem => sceneItem.sourceName)
+            // Note: OBSWebSocket (v4.x) do not report sources under
+            //       group and cannot be obtained from GetSceneItemProperties
+            //       because SceneItemTransform have no name/item property
+            try {
+                // TODO: Add option to add scene name before source name
+                oscOut.send(sceneItemListPath, sceneItemList)
+            } catch (e) {
+                if (DEBUG) console.error('getSceneItemList -- Failed to send scene item list', e)
+            }
+        }
+        return response
+    } catch (e) {
+        if (DEBUG) console.error('getSceneItemList -- Failed to get scene item list', e)
+    }
+}
+
+async function getSceneItemProperties(path, sendOSC = true) {
+    const sceneItemPropertiesPath = `/sceneItem/${path.join('/')}`
+    // if (DEBUG) console.info('getSceneItemProperties -- feedback path:', sceneItemPropertiesPath)
+
+    if (path.length === 0 || path.length > 3) {
+        if (DEBUG) console.error('getSceneItemProperties -- Invalid path (too short or too long):', path.join('/'))
+        return
+    }
+
+    let scene, sceneItem
+    if (path.length === 1) {
+        sceneItem = path[0]
+    } else {
+        scene = path[0]
+        sceneItem = path.at(-1)
+    }
+
+    try {
+        const response = await obs.send('GetSceneItemProperties', { item: sceneItem, ...(scene !== undefined ? { 'scene-name': scene } : {}) })
+        if (path.length === 3) {
+            console.info('Parent name:', response.parentGroupName)
+            if (response.parentGroupName !== path[1]) {
+                if (DEBUG) console.error('getSceneItemProperties -- Invalid path (wrong parent group):', path.join('/'))
+                return
+            }
+        }
+
+        if (sendOSC) {
+            try {
+                const propertyList = parsePropertyList(response)
+                oscOut.send(sceneItemPropertiesPath, propertyList)
+            } catch (e) {
+                if (DEBUG) console.error('getSceneItemProperties -- Failed to send scene item properties:', e)
+            }
+        }
+        return response
+    } catch (e) {
+        if (DEBUG) console.error('getSceneItemProperties -- Failed to get scene item properties:', e)
+    }
+}
+
+function parsePropertyList(properties) {
+    const propertyList = []
+
+    for (const key in properties) {
+        if (typeof (properties[key]) === 'object') {
+            for (const subKey in properties[key]) {
+                propertyList.push(`${key}/${subKey}`)
+            }
+        } else {
+            propertyList.push(key)
+        }
+    }
+
+    return propertyList
+}
+
+async function getSceneItemProperty(path, propertyPath, sendOSC = true) {
+    if (propertyPath === undefined || propertyPath.length === 0) { return }
+    if (propertyPath.length > 3) {
+        if (DEBUG) console.error('getSceneItemProperty -- Invalid property:', propertyPath.join('/'))
+        return
+    }
+    let SceneItemPropertyPath = `/sceneItem/${path.join('/')}/property/${propertyPath.join('/')}`
+    const properties = await getSceneItemProperties(path, false)
+    if (properties === undefined) { return }
+
+    let property = properties
+    for (const p of propertyPath) {
+        property = property[p]
+        if (property === undefined) {
+            if (DEBUG) console.error('getSceneItemProperty -- Unknown property:', propertyPath.join('/'))
+            return
+        }
+    }
+
+    if (sendOSC) {
+        // TODO: Add option to send complete path
+        if (false) {
+            const sceneItemList = await getSceneItemList(undefined, false)
+            if (sceneItemList === undefined) {
+                if (DEBUG) console.error('getSceneItemProperty -- Failed to get scene name from getSceneItemList')
+                return
+            }
+            SceneItemPropertyPath = `/sceneItem/${sceneItemList.sceneName}${properties.parentGroupName !== undefined ? '/' + properties.parentGroupName : ''}/${properties.name}/property/${propertyPath.join('/')}`
+        }
+
+        if (typeof (property) !== 'object') {
+            try {
+                oscOut.send(SceneItemPropertyPath, property)
+            } catch (e) {
+                if (DEBUG) console.error(`getSceneItemProperty -- Failed to send property ${propertyPath.join('/')}:`, e)
+            }
+        } else {
+            for (const key in property) {
+                if (typeof (property[key]) === 'object') {
+                    if (DEBUG) console.error(`getSceneItemProperty -- Property ${propertyPath.join('/')} is not a single-level object`)
+                    return
+                }
+            }
+
+            // TODO: Add option to toggle the path to send single-level object's values
+            if (true) {
+                for (const key in property) {
+                    try {
+                        oscOut.send(SceneItemPropertyPath.concat('/', key), property[key])
+                    } catch (e) {
+                        if (DEBUG) console.error(`getSceneItemProperty -- Failed to send property ${propertyPath.join('/')}/${key}:`, e)
+                    }
+                }
+            } else {
+                try {
+                    oscOut.send(SceneItemPropertyPath, Object.values(property))
+                } catch (e) {
+                    if (DEBUG) console.error(`getSceneItemProperty -- Failed to send property ${propertyPath.join('/')}:`, e)
+                }
+            }
+        }
+    }
+
+    return property
+}
+
+async function setSceneItemProperty(path, propertyPath, args) {
+    if (path.length === 0 || path.length > 3) {
+        if (DEBUG) console.error('setSceneItemProperty -- Invalid path (too short or too long):', path.join('/'))
+        return
+    }
+    if (propertyPath.length === 0 || propertyPath.length > 2) {
+        if (DEBUG) console.error('setSceneItemProperty -- Invalid property path (too short or too long):', propertyPath.join('/'))
+        return
+    }
+
+    const properties = await getSceneItemProperties(path, false)
+    if (properties === undefined) { return }
+
+    if (path.length !== 1) {
+        properties['scene-name'] = path[0]
+    }
+    properties.item = properties.name
+
+
+    let property = properties
+    let propertyParent
+    for (const p of propertyPath) {
+        propertyParent = property
+        property = property[p]
+        if (property === undefined) {
+            if (DEBUG) console.error('setSceneItemProperty -- Unknown property:', propertyPath.join('/'))
+            return
+        }
+    }
+
+    if (typeof (property) !== 'object') {
+        propertyParent[propertyPath.at(-1)] = args[0]
+    } else if (true) {
+        if (args.length !== Object.keys(property).length) {
+            if (DEBUG) console.error(`setSceneItemProperty -- Number of arguments (${args.length}) not match the number of child properties (${Object.keys(property).length})`)
+            return
+        }
+        let i = 0
+        for (const key in property) {
+            property[key] = args[i]
+            i++
+        }
+    }
+
+    try {
+        await obs.send('SetSceneItemProperties', properties)
+    } catch (e) {
+        if (DEBUG) console.error(`setSceneItemProperty -- Failed to set scene item property ${propertyPath.join('/')}:`, e)
+    }
+}
+
+async function setSceneItemRender(path, render) {
+    const properties = await getSceneItemProperties(path, false)
+    if (properties === undefined) { return }
+
+    try {
+        obs.send('SetSceneItemRender', { source: path.at(-1), render: render ? true : false, ...((path.length > 1) ? { 'scene-name': path[0] } : {}) })
+    } catch (e) {
+        if (DEBUG) console.error('setSceneItemRender -- Failed to set scene item render state:', e)
+    }
+}
+
+async function resetSceneItem(path) {
+    const properties = await getSceneItemProperties(path, false)
+    if (properties === undefined) { return }
+
+    try {
+        await obs.send('ResetSceneItem', { item: path.at(-1), ...((path.length > 1) ? { 'scene-name': path[0] } : {}) })
+    } catch (e) {
+        if (DEBUG) console.error('resetSceneItem -- Failed to reset scene item:', e)
+    }
+}
+
 async function testFunction(path, args) {
-    console.info(path, args)
+    if (DEBUG) console.info(path, args)
 }
