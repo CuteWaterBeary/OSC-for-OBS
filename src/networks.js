@@ -1001,16 +1001,18 @@ async function processSource(path, args) {
         return
     }
 
-    // TODO: Change path from source/[source]/[setting] to source/[source]/setting/[setting]
-    if (path[1] === undefined && DEBUG) {
+    if (path[1] === undefined) return
+
+    // TODO: Change path from /source/[source]/[setting] to /source/[source]/setting/[setting]
+    if (path[1] === 'setting' && DEBUG) {
         getSourceSettings(path[0])
         return
     } else {
-        if (args[0] === undefined) {
-            getSourceSetting(path[0], path[1])
-        } else {
-            setSourceSetting(path[0], path[1], args[0])
-        }
+        // if (args[0] === undefined) {
+        //     getSourceSetting(path[0], path[1])
+        // } else {
+        //     setSourceSetting(path[0], path[1], args[0])
+        // }
     }
 }
 
@@ -1041,7 +1043,7 @@ async function getSourceSettings(source, sourceType) {
 async function getSourceSetting(source, setting) {
     const sourceSettingPath = `/source/${source}/${setting}`
     const sourceSettings = getSourceSettings(source)
-    if (!sourceSettings) { return }
+    if (!sourceSettings) return
     if (sourceSettings[setting] === undefined) {
         if (DEBUG) console.error('getSourceSetting -- No matched setting name:', setting)
         return
@@ -1056,7 +1058,7 @@ async function getSourceSetting(source, setting) {
 
 async function setSourceSetting(source, setting, value, sourceType) {
     const sourceSettings = getSourceSettings(source)
-    if (!sourceSettings) { return }
+    if (!sourceSettings) return
     // Note: Due to how OBSWebSocket work, settings might not show up
     //       until it's been changed at least once in OBS
     // if (sourceSettings[setting] === undefined) {
@@ -1091,32 +1093,32 @@ async function processSceneItem(path, args) {
     // path: [scene]/[source|group/source]/[property|show|reset]
 
     for (let i = 1; i < 4; i++) {
-        if (path[i] === undefined) { return }
-        if (keywords.sceneItem.includes(path[i])) {
-            if (path[i] === 'property') {
-                if (path[i + 1] === undefined) {
-                    getSceneItemProperties(path.slice(0, i))
-                    return
-                }
+        if (path[i] === undefined) return
+        if (!keywords.sceneItem.includes(path[i])) continue
 
-                if (args[0] === undefined) {
-                    getSceneItemProperty(path.slice(0, i), path.slice(i + 1))
-                } else {
-                    setSceneItemProperty(path.slice(0, i), path.slice(i + 1), args)
-                }
-            } else if (path[i] === 'show') {
-                if (args[0] === 1 || args[0] === 0) {
-                    setSceneItemRender(path.slice(0, i), args[0])
-                }
-            } else if (path[i] === 'hide' && args[0] === 1) {
-                setSceneItemRender(path.slice(0, i), 0)
-            } else if (path[i] === 'reset' && args[0] === 1) {
-                resetSceneItem(path.slice(0, i))
-            } else {
-                if (DEBUG) console.error('processSceneItem -- Invalid command:', path[i])
+        if (path[i] === 'property') {
+            if (path[i + 1] === undefined) {
+                getSceneItemProperties(path.slice(0, i))
                 return
             }
+
+            if (args[0] === undefined) {
+                getSceneItemProperty(path.slice(0, i), path.slice(i + 1))
+            } else {
+                setSceneItemProperty(path.slice(0, i), path.slice(i + 1), args)
+            }
+        } else if (path[i] === 'show') {
+            if (args[0] === 1 || args[0] === 0) {
+                setSceneItemRender(path.slice(0, i), args[0])
+            } else if (args[0] === undefined) {
+                getSceneItemRender(path.slice(0, i))
+            }
+        } else if (path[i] === 'hide' && args[0] === 1) {
+            setSceneItemRender(path.slice(0, i), 0)
+        } else if (path[i] === 'reset' && args[0] === 1) {
+            resetSceneItem(path.slice(0, i))
         }
+        return
     }
 }
 
@@ -1143,7 +1145,7 @@ async function getSceneItemList(scene, sendOSC = true) {
 }
 
 async function getSceneItemProperties(path, sendOSC = true) {
-    const sceneItemPropertiesPath = `/sceneItem/${path.join('/')}`
+    let sceneItemPropertiesPath = `/sceneItem/${path.join('/')}`
     // if (DEBUG) console.info('getSceneItemProperties -- feedback path:', sceneItemPropertiesPath)
 
     if (path.length === 0 || path.length > 3) {
@@ -1170,6 +1172,16 @@ async function getSceneItemProperties(path, sendOSC = true) {
         }
 
         if (sendOSC) {
+            // TODO: Add option to send complete path
+            if (false) {
+                const sceneItemList = await getSceneItemList(undefined, false)
+                    if (sceneItemList === undefined) {
+                        if (DEBUG) console.error('getSceneItemRender -- Failed to get scene name from getSceneItemList')
+                        return
+                    }
+                    sceneItemPropertiesPath = `/sceneItem/${sceneItemList.sceneName}${response.parentGroupName !== undefined ? '/' + response.parentGroupName : ''}/${response.name}`
+            }
+
             try {
                 const propertyList = parsePropertyList(response)
                 oscOut.send(sceneItemPropertiesPath, propertyList)
@@ -1200,14 +1212,14 @@ function parsePropertyList(properties) {
 }
 
 async function getSceneItemProperty(path, propertyPath, sendOSC = true) {
-    if (propertyPath === undefined || propertyPath.length === 0) { return }
+    if (propertyPath === undefined || propertyPath.length === 0) return
     if (propertyPath.length > 3) {
         if (DEBUG) console.error('getSceneItemProperty -- Invalid property:', propertyPath.join('/'))
         return
     }
     let SceneItemPropertyPath = `/sceneItem/${path.join('/')}/property/${propertyPath.join('/')}`
     const properties = await getSceneItemProperties(path, false)
-    if (properties === undefined) { return }
+    if (properties === undefined) return
 
     let property = properties
     for (const p of propertyPath) {
@@ -1276,7 +1288,7 @@ async function setSceneItemProperty(path, propertyPath, args) {
     }
 
     const properties = await getSceneItemProperties(path, false)
-    if (properties === undefined) { return }
+    if (properties === undefined) return
 
     if (path.length !== 1) {
         properties['scene-name'] = path[0]
@@ -1318,7 +1330,7 @@ async function setSceneItemProperty(path, propertyPath, args) {
 
 async function setSceneItemRender(path, render) {
     const properties = await getSceneItemProperties(path, false)
-    if (properties === undefined) { return }
+    if (properties === undefined) return
 
     try {
         obs.send('SetSceneItemRender', { source: path.at(-1), render: render ? true : false, ...((path.length > 1) ? { 'scene-name': path[0] } : {}) })
@@ -1327,9 +1339,31 @@ async function setSceneItemRender(path, render) {
     }
 }
 
+async function getSceneItemRender(path) {
+    let sceneItemRenderPath = `/sceneItem/${path.join('/')}/show`
+    const properties = await getSceneItemProperties(path, false)
+    if (properties === undefined) return
+    
+    // TODO: Add option to send complete path
+    if (false) {
+        const sceneItemList = await getSceneItemList(undefined, false)
+            if (sceneItemList === undefined) {
+                if (DEBUG) console.error('getSceneItemRender -- Failed to get scene name from getSceneItemList')
+                return
+            }
+            sceneItemRenderPath = `/sceneItem/${sceneItemList.sceneName}${properties.parentGroupName !== undefined ? '/' + properties.parentGroupName : ''}/${properties.name}/show`
+    }
+
+    try {
+        oscOut.send(sceneItemRenderPath, properties.visible ? 1 : 0)
+    } catch (e) {
+        if (DEBUG) console.error('setSceneItemRender -- Failed to send scene item render state:', e)
+    }
+}
+
 async function resetSceneItem(path) {
     const properties = await getSceneItemProperties(path, false)
-    if (properties === undefined) { return }
+    if (properties === undefined) return
 
     try {
         await obs.send('ResetSceneItem', { item: path.at(-1), ...((path.length > 1) ? { 'scene-name': path[0] } : {}) })
