@@ -1,11 +1,11 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron')
-
 const { open } = require('fs/promises')
 const path = require('path')
+
 const { connectOBS, disconnectOBS, connectOSC, disconnectOSC, setUpOBSOSC, syncMiscConfig } = require('./networks')
 
 const DEBUG = process.argv.includes('--enable-log')
-const configPath = path.join(__dirname, 'config.json')
+const configPath = path.join(app.getAppPath(), 'config.json')
 const windowHeight = 700
 const defaultConfig = {
     openDevToolsOnStart: true,
@@ -193,13 +193,13 @@ async function checkConfigState() {
 }
 
 async function showConfigDialog() {
-    const dialogMessage = `App settings will be automatically saved to:
+    const dialogMessage = `App settings will be created and saved to:
 \n${configPath.toString()}
-\nIf you saw this message multiple times, please check your antivirus or system settings.`
+\nIf this message shows up multiple times, please check your antivirus or system settings.`
     await dialog.showMessageBox({
         message: dialogMessage,
         type: 'info',
-        title: 'Auto Save Reminder'
+        title: 'Auto Save'
     })
 }
 
@@ -402,6 +402,7 @@ function createDevWindow() {
 }
 
 app.whenReady().then(async () => {
+    if (DEBUG) console.info(`OSC for OBS (forked) version ${app.getVersion()}, platform=${process.platform}, arch=${process.arch}`)
     await loadConfig()
     ipcMain.handle('connect:all', connectAll)
     ipcMain.handle('disconnect:all', disconnectAll)

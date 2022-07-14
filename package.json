@@ -1,15 +1,26 @@
 {
-  "name": "electron-test",
-  "version": "1.0.0",
-  "description": "A test application based on electron",
+  "name": "obsosc-app",
+  "productName": "OSC for OBS",
+  "version": "0.5.0",
+  "description": "Control OBS via OSC, a forked and heavily modified version from jshea2/OSC-for-OBS",
   "main": "src/index.js",
   "scripts": {
     "start": "electron . --enable-log",
-    "build-win32": "electron-packager . electron-test --platform=win32 --arch=ia32",
-    "build-win64": "electron-packager . electron-test --platform=win32 --arch=x64"
+    "build-win32": "electron-packager . OSC-for-OBS --platform=win32 --arch=ia32 --ignore=config.json --out=release --overwrite",
+    "build-win64": "electron-packager . OSC-for-OBS --platform=win32 --arch=x64 --ignore=config.json --out=release --overwrite",
+    "build-darwin": "electron-packager . OSC-for-OBS --platform=darwin --arch=universal --ignore=config.json --out=release --overwrite"
   },
-  "author": "Re-Alise",
-  "license": "ISC",
+  "author": {
+    "name": "Re:Alise",
+    "email": "28112294+Re-Alise@users.noreply.github.com"
+  },
+  "contributors": [
+    {
+      "name": "Joe Shea",
+      "email": "jshea2@users.noreply.github.com"
+    }
+  ],
+  "license": "MIT",
   "devDependencies": {
     "electron": "^19.0.4",
     "electron-packager": "^15.5.1"
