@@ -27,9 +27,9 @@ async function processVirtualCam(networks, path, args) {
 
 async function getVirtualCamStatus(networks) {
     try {
-        const response = await networks.obs.send('GetVirtualCamStatus')
+        const { outputActive } = await networks.obs.call('GetVirtualCamStatus')
         try {
-            networks.oscOut.send('/virtualCam', (response.virtualCamTimecode === undefined) ? 0 : 1)
+            networks.oscOut.send('/virtualCam', outputActive ? 0 : 1)
         } catch (e) {
             if (DEBUG) console.error('getVirtualCamStatus -- Failed to send virtual camera status:', e)
         }
@@ -40,7 +40,7 @@ async function getVirtualCamStatus(networks) {
 
 async function startVirtualCam(networks) {
     try {
-        await networks.obs.send('StartVirtualCam')
+        await networks.obs.call('StartVirtualCam')
     } catch (e) {
         if (DEBUG) console.error('startVirtualCam -- Failed to start virtual camera:', e)
     }
@@ -48,7 +48,7 @@ async function startVirtualCam(networks) {
 
 async function stopVirtualCam(networks) {
     try {
-        await networks.obs.send('StopVirtualCam')
+        await networks.obs.call('StopVirtualCam')
     } catch (e) {
         if (DEBUG) console.error('stopVirtualCam -- Failed to stop virtual camera:', e)
     }
@@ -56,7 +56,7 @@ async function stopVirtualCam(networks) {
 
 async function toggleVirtualCam(networks) {
     try {
-        await networks.obs.send('StartStopVirtualCam')
+        await networks.obs.call('ToggleVirtualCam')
     } catch (e) {
         if (DEBUG) console.error('toggleVirtualCam -- Failed to toggle virtual camera state:', e)
     }

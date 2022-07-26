@@ -1,7 +1,7 @@
 # OSC for OBS
 
 > **Note**  
-> This is a forked repository of [jshea2/OSC-for-OBS](github.com/jshea2/OSC-for-OBS) being (heavily) modified to personal preference, which make it *not* compatible with upstream (function, versioning, etc.).  
+> This is a forked repository of [jshea2/OSC-for-OBS](github.com/jshea2/OSC-for-OBS) being (heavily) modified to personal preference, which make it *not* compatible with upstream (function, versioning, etc.). 
 > If you found a bug or have any suggestion for this repo, please put it [here](https://github.com/Re-Alise/OSC-for-OBS/issues).
 
 <p align="center">
@@ -13,8 +13,7 @@ Control and listen to [OBS](https://obsproject.com/) via OSC protocol
 # Requirement
 
 - [OBS Studio](https://obsproject.com) 27.0.0 or above
-- [obs-websocket](https://github.com/obsproject/obs-websocket) 4.9.1  
-  obs-websocket 5.0.0 and above **DO NOT** compatible with older API (unless you installed additional `4.9.1-compat` binary)
+- [obs-websocket](https://github.com/obsproject/obs-websocket) **5.0.0** or above
 
 # OSC Command List (WIP)
 
@@ -41,22 +40,97 @@ Control and listen to [OBS](https://obsproject.com/) via OSC protocol
 `/source` `[source name]`
 
 ## Scene Item
-
+ 
 `/sceneItem`
 
-`/sceneItem/[sceen item name]/show`
+`/sceneItem/[path to sceen item]/show`
 
-`/sceneItem/[sceen item name]/show` `[0|1]`
+`/sceneItem/[path to sceen item]/show` `[0|1]`
 
-`/sceneItem/[sceen item name]/hide` `1`
+`/sceneItem/[path to sceen item]/hide` `1`
 
-`/sceneItem/[sceen item name]/reset` `1`
+<!-- `/sceneItem/[path to sceen item]/reset` `1` -->
 
-`/sceneItem/[sceen item name]/property`
+`/sceneItem/[path to sceen item]/transform`
 
-`/sceneItem/[sceen item name]/property/[property path]`
+Get transform/crop info (attributes) of a scene item
 
-`/sceneItem/[sceen item name]/property/[property path]` `[property value]`
+- width, height (Read only)  
+  Current source size when bounding box type is set to `No bounds`
+
+- sourceWidth, sourceHeight (Read only)  
+  Source's original size
+
+- positionX, positionY
+
+- scaleX, scaleY
+
+- cropTop, cropRight, cropBottom, cropLeft
+
+- rotation (degree)
+
+- alignment  
+  Alignment for source or for bounding box when enabled, default: `5` (Top Left)
+  <table>
+    <tr>
+      <td>5 (Top Left)</td>
+      <td>4 (Top Center)</td>
+      <td>6 (Top Right)</td>
+    </tr>
+    <tr>
+      <td>1 (Center Left)</td>
+      <td>0 (Center)</td>
+      <td>2 (Center Right)</td>
+    </tr>
+    <tr>
+      <td>9 (Bottom Left)</td>
+      <td>8 (Bottom Center)</td>
+      <td>10 (Bottom Right)</td>
+    </tr>
+  </table>
+
+- boundsAlignment  
+  Alignment for source inside a bounding box, default: `0` (`Center`)
+
+- boundsWidth, boundsHeight
+
+- boundsType  
+  Bounding box type, default: `OBS_BOUNDS_NONE` (No bounds)
+  - `OBS_BOUNDS_NONE` (No bounds)
+  - `OBS_BOUNDS_STRETCH` (Stretch to bounds)
+  - `OBS_BOUNDS_SCALE_INNER` (Scale to inner bounds)
+  - `OBS_BOUNDS_SCALE_OUTER` (Scale to outer bounds)
+  - `OBS_BOUNDS_SCALE_TO_WIDTH` (Scale to width of bounds)
+  - `OBS_BOUNDS_SCALE_TO_HEIGHT` (Scale to height of bounds)
+  - `OBS_BOUNDS_MAX_ONLY` (Maximum size only)
+
+`/sceneItem/[path to sceen item]/transform/[transform attribute]`
+
+`/sceneItem/[path to sceen item]/transform/[transform attribute]` `[attribute value]`
+
+### Note - Resizing a source (scene item)
+
+By default, bounding box type of a source is set to `No bounds` . To properly resize a source, you can either stick to No bounds then change the scale of it, or switch to `Stretch to bounds` then change the bounding box size.
+
+#### Example
+
+With a OBS canvas (output) resolution of 1920x1080, a scene `Scene 1` and a image source `Image` contained a 4K image (3840x2160):
+
+If we want to fit `Image` entirely into `Scene 1` , we can either change the scale by
+
+```
+'/sceneItem/Scene 1/Image/transform/scaleX' 0.5
+'/sceneItem/Scene 1/Image/transform/scaleY' 0.5
+```
+
+Or switch bounding box type to `Stretch to bounds` then change the bounding box size, which you can precisely set
+
+```
+'/sceneItem/Scene 1/Image/transform/boundsType' 'OBS_BOUNDS_STRETCH'
+
+'/sceneItem/Scene 1/Image/transform/boundsWidth' 1920
+'/sceneItem/Scene 1/Image/transform/boundsHeight' 1080
+```
 
 ## Audio
 
@@ -150,7 +224,7 @@ Control and listen to [OBS](https://obsproject.com/) via OSC protocol
 
 ## Audio
 
-`/sceneAudio` `[scene name]` `[scene audio source 1]` ...  `[scene audio source n]`
+`/sceneAudio` `[scene name]` `[scene audio source 1]` ... `[scene audio source n]`
 
 `/audio/[audio source]/volume` `[volume (0.0~1.0)]`
 

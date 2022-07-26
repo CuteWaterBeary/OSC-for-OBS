@@ -17,7 +17,7 @@
             <label for="obsip">IP</label>
             <input type="text" id="obsip" placeholder="localhost" size="10">
             <label for="obsport">Port</label>
-            <input type="text" id="obsport" placeholder="4444" size="5">
+            <input type="text" id="obsport" placeholder="4455" size="5">
             <label for="obspassword">Password:</label>
             <input type="password" id="obspassword" value="" size="5">
         </div>
@@ -40,11 +40,53 @@
         <hr>
         <div class="misc-config">
             <div class="switch-config" title="Notify OSC client when active scene changes">
-                Notify OBS Active Scene
+                Notify active scene
                 <div class="switch" id="switch-notifyActiveScene" switch-action="notifyActiveScene" value="0"></div>
             </div>
         </div>
-        <div class="misc-config disabled" id="custom-scene-feedback">
+        <div class="misc-config">
+            <div class="switch-config" title="Notify OSC client when active scene changes">
+                Notify scene inputs
+                <div class="switch" id="switch-notifySceneInputs" switch-action="notifySceneInputs" value="0"></div>
+            </div>
+        </div>
+        <div class="misc-config">
+            <div class="switch-config" title="Notify OSC client when active scene changes">
+                Notify volume change
+                <div class="switch" id="switch-notifyVolumeChange" switch-action="notifyVolumeChange" value="0"></div>
+            </div>
+        </div>
+        <div class="misc-config">
+            <div class="switch-config" title="Notify OSC client when active scene changes">
+                Notify input mute state
+                <div class="switch" id="switch-notifyMuteState" switch-action="notifyMuteState" value="0"></div>
+            </div>
+        </div>
+        <div class="misc-config">
+            <div class="switch-config" title="Notify OSC client when active scene changes">
+                Notify virtual cam state
+                <div class="switch" id="switch-notifyVirtualCamState" switch-action="notifyVirtualCamState" value="0"></div>
+            </div>
+        </div>
+        <div class="misc-config">
+            <div class="switch-config" title="Notify OSC client when active scene changes">
+                Notify recording state
+                <div class="switch" id="switch-notifyRecordingState" switch-action="notifyRecordingState" value="0"></div>
+            </div>
+        </div>
+        <div class="misc-config">
+            <div class="switch-config" title="Notify OSC client when active scene changes">
+                Notify studio mode state
+                <div class="switch" id="switch-notifyStudioModeState" switch-action="notifyStudioModeState" value="0"></div>
+            </div>
+        </div>
+        <div class="misc-config">
+            <div class="switch-config" title="Notify OSC client when active scene changes">
+                Notify studio preview scene
+                <div class="switch" id="switch-notifyStudioPreviewScene" switch-action="notifyStudioPreviewScene" value="0"></div>
+            </div>
+        </div>
+        <!-- <div class="misc-config disabled" id="custom-scene-feedback">
             <div class="switch-config" title="Notify active scene through custom path">
                 Custom Feedback Path
                 <div class="switch" id="switch-useCustomPath" switch-action="useCustomPath" value="0"></div>
@@ -55,11 +97,11 @@
                 /[SceneName]/
                 <input type="text" id="useCustomPath-suffix" size="4" title="Leave it blank if you don't want it">
             </div>
-        </div>
+        </div> -->
         <div class="misc-config">
-            <div class="switch-config" title="Instead of amplitude/mul (0.0 to 1.0), it will interprete the value to decibel (-100 dB to 0 dB)">
-                Set Source Volume by dB
-                <div class="switch" id="switch-useDbForVolume" switch-action="useDbForVolume" value="0"></div>
+            <div class="switch-config" title="Output additional volume feedback in dB to /audio/[audio input name]/volumeDb">
+                Enable volumeDb feedback
+                <div class="switch" id="switch-enableVolumeDbOutput" switch-action="enableVolumeDbOutput" value="0"></div>
             </div>
         </div>
         <button id="connect-button">Connect</button>

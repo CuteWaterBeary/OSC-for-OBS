@@ -1,206 +1,248 @@
-const { getSourceList } = require('./source')
+// const { getSourceList } = require('./source')
+const { getCurrentProgramScene } = require('./scene')
+const { getSceneItemList } = require('./sceneItem')
+module.exports = { updateAudioInputKindList, processSourceAudio, getAudioInputList, getSceneAudioInputList, sendSceneAudioInputFeedback, sendAudioInputVolumeFeedback, sendAudioMuteFeedback }
 
 const DEBUG = process.argv.includes('--enable-log')
 
-let audioSourceList = new Set()
+let audioInputKindList = new Set()
+let otherInputKindList = new Set()
 
-module.exports = { processSourceAudio, getAudioSourceList, sendSceneAudioFeedback, sendAudioVolumeFeedback, sendAudioMuteFeedback }
+
+// TODO: Change updateAudioInputKindList when OBSWebSocket provide more suitable API
+// TODO: Remove audio capability checking via GetInputVolume in getAudioInputList and
+//       updateAudioInputKindList when OBSWebSocket provide more suitable API
 
 async function processSourceAudio(networks, path, args) {
     if (path[0] === undefined) {
         if (args[0] === undefined) {
-            getAudioSourceList(networks)
+            getAudioInputList(networks)
         } else {
-            getSourceVolume(networks, args[0])
+            getInputVolume(networks, args[0])
+            getInputMute(networks, args[0])
         }
         return
     }
 
     if (path[1] === 'volume') {
-        if (args === undefined) {
-            getSourceVolume(networks, path[0])
+        if (args[0] === undefined) {
+            getInputVolume(networks, path[0])
         } else {
-            setSourceVolume(networks, path[0], args[0])
+            setInputVolume(networks, path[0], args[0])
+        }
+    } else if (path[1] === 'volumeDb') {
+        if (args[0] === undefined) {
+            getInputVolume(networks, path[0], true)
+        } else {
+            setInputVolume(networks, path[0], args[0], true)
         }
     } else if (path[1] === 'mute') {
-        if (args === undefined) {
-            getSourceMuteState(networks)
+        if (args[0] === undefined) {
+            getInputMute(networks, path[0])
         } else {
-            setSourceMuteState(networks, path[0], args[0])
+            setInputMute(networks, path[0], args[0])
         }
     }
 }
 
-async function getAudioSourceList(networks, sendOSC = true) {
-    updateAudioSourceList(networks)
-
+async function getInputList(networks, sendOSC = true) {
+    const inputListPath = '/input'
     try {
-        const sourceList = await getSourceList(networks, false)
-        if (!sourceList) {
-            if (DEBUG) console.error('getAudioSourceList -- No source list')
-            return []
-        }
-        const audioSource = []
-        sourceList.forEach(source => {
-            if (audioSourceList.has(source.typeId)) {
-                audioSource.push(source.name)
-            }
-        })
+        const { inputs } = await networks.obs.call('GetInputList')
 
-        audioSource.sort()
         if (sendOSC) {
             try {
-                networks.oscOut.send('/audio', audioSource)
+                networks.oscOut.send(inputListPath, inputs.flatmap(input => input.inputName))
             } catch (e) {
-                if (DEBUG) console.error('getAudioSourceList -- Failed to send audio source list:', e)
+                if (DEBUG) console.error('getInputList -- Failed to send input list:', e)
             }
         }
-        return audioSource
+
+        return inputs
     } catch (e) {
-        if (DEBUG) console.error('getAudioSourceList -- Failed to get source list:', e)
+        if (DEBUG) console.error('getInputList -- Failed to get input list:', e)
     }
 }
 
-async function updateAudioSourceList(networks) {
-    try {
-        const response = await networks.obs.send('GetSourceTypesList')
-        response.types.forEach(type => {
-            if (audioSourceList.has(type.typeId)) return
-            if (type.caps.hasAudio) {
-                audioSourceList.add(type.typeId)
+async function getAudioInputList(networks, sendOSC = true) {
+    const inputListPath = '/audio'
+    const inputList = await getInputList(networks, false)
+    const audioInputList = []
+
+    inputList.forEach(async input => {
+        if (otherInputKindList.has(input.inputKind)) return
+        if (audioInputKindList.has(input.inputKind)) {
+            audioInputList.push(input.inputName)
+        } else {
+            try {
+                await networks.obs.call('GetInputVolume', { inputName: input.inputName })
+                audioInputList.push(input.inputName)
+                audioInputKindList.add(input.inputKind)
+            } catch {
+                otherInputKindList.add(input.inputKind)
             }
-        })
-    } catch (e) {
-        if (DEBUG) console.error('updateAudioSourceList -- Failed to get source type list:', e)
+        }
+    })
+
+    if (sendOSC) {
+        try {
+            networks.oscOut.send(inputListPath, audioInputList)
+        } catch (e) {
+            if (DEBUG) console.error('getInputList -- Failed to send input list:', e)
+        }
+    }
+
+    return audioInputList
+}
+
+async function updateAudioInputKindList(networks) {
+    const inputList = await getInputList(networks, false)
+    for (const input of inputList) {
+        try {
+            await networks.obs.call('GetInputVolume', { inputName: input.inputName })
+            audioInputKindList.add(input.inputKind)
+        } catch (e) {
+            otherInputKindList.add(input.inputKind)
+        }
     }
 }
 
-async function getSourceVolume(networks, source) {
-    const volumePath = `/audio/${source}/volume`
-    const mutePath = `/audio/${source}/mute`
-    if (networks.miscConfig.useDbForVolume) {
+async function getInputVolume(networks, inputName, useVolumeDb = false) {
+    const volumePath = `/audio/${inputName}/volume`
+    const volumeDbPath = `/audio/${inputName}/volumeDb`
+    try {
+        const { inputVolumeMul, inputVolumeDb } = await networks.obs.call('GetInputVolume', { inputName })
+        if (useVolumeDb) {
+            networks.oscOut.send(volumeDbPath, inputVolumeDb)
+        } else {
+            networks.oscOut.send(volumePath, inputVolumeMul)
+        }
+    } catch (e) {
+        if (DEBUG) console.error(`getInputVolume - Failed to get volume (dB) of input ${inputName}:`, e)
+    }
+}
+
+async function setInputVolume(networks, inputName, inputVolume, useVolumeDb = false) {
+    console.info(`Input name: ${inputName}, volume: ${inputVolume}, dB: ${useVolumeDb}`)
+    if (useVolumeDb) {
         try {
-            const response = await networks.obs.send('GetVolume', { source: source, useDecibel: true })
-            networks.oscOut.send(volumePath, response.volume)
-            networks.oscOut.send(mutePath, response.muted ? 1 : 0)
+            await networks.obs.call('SetInputVolume', { inputName, inputVolumeDb: inputVolume })
         } catch (e) {
-            if (DEBUG) console.error(`getSourceVolume - Failed to get volume (dB) of source ${source}:`, e)
+            if (DEBUG) console.error(`setInputVolume - Failed to set volume (dB) for input ${inputName}:`, e)
         }
     } else {
         try {
-            const response = await networks.obs.send('GetVolume', { source: source })
-            networks.oscOut.send(volumePath, response.volume)
-            networks.oscOut.send(mutePath, response.muted ? 1 : 0)
+            await networks.obs.call('SetInputVolume', { inputName, inputVolumeMul: inputVolume })
         } catch (e) {
-            if (DEBUG) console.error(`getSourceVolume - Failed to get volume of source ${source}:`, e)
+            if (DEBUG) console.error(`setInputVolume - Failed to set volume for input ${inputName}:`, e)
         }
     }
 }
 
-async function setSourceVolume(networks, source, volume) {
-    if (networks.miscConfig.useDbForVolume) {
-        const volumeDb = (volume * 100) - 100
-        try {
-            await networks.obs.send('SetVolume', { source: source, volume: volumeDb, useDecibel: true })
-        } catch (e) {
-            if (DEBUG) console.error(`setSourceVolume - Failed to set volume (dB) for source ${source}:`, e)
-        }
-    } else {
-        try {
-            await networks.obs.send('SetVolume', { source: source, volume: volume })
-        } catch (e) {
-            if (DEBUG) console.error(`setSourceVolume - Failed to set volume for source ${source}:`, e)
-        }
-    }
-}
-
-async function getSourceMuteState(networks, source) {
-    const mutePath = `/audio/${source}/mute`
+async function getInputMute(networks, inputName) {
+    const mutePath = `/audio/${inputName}/mute`
     try {
-        const response = await networks.obs.send('GetMute', { source: source })
+        const { inputMuted } = await networks.obs.call('GetInputMute', { inputName })
         try {
-            networks.oscOut.send(mutePath, response.muted ? 1 : 0)
+            networks.oscOut.send(mutePath, inputMuted ? 1 : 0)
         } catch (e) {
-            if (DEBUG) console.error(`getSourceMuteState -- Failed to send mute state of source ${source}:`, e)
+            if (DEBUG) console.error(`getInputMute -- Failed to send mute state of input ${inputName}:`, e)
         }
     } catch (e) {
-        if (DEBUG) console.error(`getSourceMuteState -- Failed to get mute state from scene ${source}:`, e)
+        if (DEBUG) console.error(`getInputMute -- Failed to get mute state from input ${inputName}:`, e)
     }
 }
 
-async function setSourceMuteState(networks, source, state) {
+async function setInputMute(networks, inputName, state) {
     try {
-        await networks.obs.send('SetMute', { source: source, mute: state ? true : false })
-    } catch {
-        if (DEBUG) console.error(`setSourceMuteState -- Failed to set mute state from scene ${source}:`, e)
+        await networks.obs.call('SetInputMute', { inputName, inputMuted: state ? true : false })
+    } catch (e) {
+        if (DEBUG) console.error(`setInputMute -- Failed to set mute state from input ${inputName}:`, e)
     }
 }
 
-async function getSpecialSourceList(networks, sendOSC = true) {
-    const specialAudioPath = `/specialAudio`
+async function getSpecialInputs(networks, sendOSC = true) {
+    const specialInputPath = `/specialAudio`
     try {
-        const response = await networks.obs.send('GetSpecialSources')
-        const specialSourceList = []
-        const regex = /(desktop|mic)\-\d/g
+        const response = await networks.obs.call('GetSpecialInputs')
+        const specialInputList = []
         for (const key in response) {
-            if (key.match(regex)) specialSourceList.push(response[key])
+            if (response[key] !== null) specialInputList.push(response[key])
         }
 
         if (sendOSC) {
             try {
-                networks.oscOut.send(specialAudioPath, specialSourceList)
+                networks.oscOut.send(specialInputPath, specialInputList)
             } catch (e) {
                 if (DEBUG) console.error('getSpecialSourceList -- Failed to send special audio source list:', e)
             }
         }
 
-        return specialSourceList
+        return specialInputList
     } catch (e) {
         if (DEBUG) console.error('getSpecialSourceList -- Failed to get special audio source list:', e)
     }
 
 }
 
-async function sendSceneAudioFeedback(networks, response) {
+async function getSceneAudioInputList(networks, sceneName) {
     const sceneAudioPath = `/sceneAudio`
-    const specialAudioSource = await getSpecialSourceList(networks, false)
-    let sceneAudioSource = []
+    const specialAudioInputs = await getSpecialInputs(networks, false)
+    let sceneAudioInputs = []
 
-    response.sources.forEach(source => {
-        // Note: Use source.type instead of source.typeId here, probably a typo in OSBWebSocket (or .js)
-        if (audioSourceList.has(source.type) && !specialAudioSource.includes(source.name)) {
-            sceneAudioSource.push(source.name)
+    if (sceneName === undefined) {
+        sceneName = await getCurrentProgramScene(networks, false)
+    }
+
+    const sceneItems = await getSceneItemList(networks, sceneName, false)
+    sceneItems.forEach(async sceneItem => {
+        if (sceneItem.inputKind === null) return
+        if (otherInputKindList.has(sceneItem.inputKind)) return
+        if (audioInputKindList.has(sceneItem.inputKind)) {
+            sceneAudioInputs.push(sceneItem.sourceName)
+        } else {
+            try {
+                await networks.obs.call('GetInputVolume', { inputName: sceneItem.sourceName })
+                sceneAudioInputs.push(sceneItem.sourceName)
+                audioInputKindList.add(sceneItem.inputKind)
+            } catch {
+                otherInputKindList.add(sceneItem.inputKind)
+            }
         }
     })
 
-    sceneAudioSource.sort()
-    sceneAudioSource = [...specialAudioSource, ...sceneAudioSource]
-    if (DEBUG) console.info('Scene audio list:', sceneAudioSource)
+    sceneAudioInputs = [...specialAudioInputs, ...sceneAudioInputs]
+    sceneAudioInputs.sort()
+    if (DEBUG) console.info('Scene audio list:', sceneAudioInputs)
     try {
-        networks.oscOut.send(sceneAudioPath, response.sceneName ? response.sceneName : response.name ? response.name : '', sceneAudioSource)
+        networks.oscOut.send(sceneAudioPath, sceneName, sceneAudioInputs)
     } catch (e) {
-        if (DEBUG) console.error('sendSceneAudioFeedback -- Failed to send scene audio feedback:', e)
+        if (DEBUG) console.error('sendSceneAudioInputFeedback -- Failed to send scene audio feedback:', e)
     }
 }
 
-function sendAudioVolumeFeedback(networks, response) {
-    const volumePath = `/audio/${response.sourceName}/volume`
+async function sendSceneAudioInputFeedback(networks, sceneName) {
+    getSceneAudioInputList(networks, sceneName)
+}
+
+function sendAudioInputVolumeFeedback(networks, inputName, inputVolumeMul, inputVolumeDb) {
+    const volumePath = `/audio/${inputName}/volume`
+    const volumeDbPath = `/audio/${inputName}/volumeDb`
     try {
-        if (networks.miscConfig.useDbForVolume === true) {
-            networks.oscOut.send(volumePath, response.volumeDb)
-        } else {
-            networks.oscOut.send(volumePath, response.volume)
+        networks.oscOut.send(volumePath, inputVolumeMul)
+        if (networks.miscConfig.enableVolumeDbOutput === true) {
+            networks.oscOut.send(volumeDbPath, inputVolumeDb)
         }
     } catch (e) {
-        if (DEBUG) console.error(`sendAudioVolumeFeedback -- Failed to send audio volume${(networks.miscConfig.useDbForVolume === true) ? ' (dB)' : ''} feedback for ${response.sourceName}:`, e)
+        if (DEBUG) console.error(`sendAudioInputVolumeFeedback -- Failed to send audio volume feedback for ${inputName}:`, e)
     }
 }
 
-function sendAudioMuteFeedback(networks, response) {
-    const mutePath = `/audio/${response.sourceName}/mute`
+function sendAudioMuteFeedback(networks, inputName, inputMuted) {
+    const mutePath = `/audio/${inputName}/mute`
     try {
-        networks.oscOut.send(mutePath, response.muted ? 1 : 0)
+        networks.oscOut.send(mutePath, inputMuted ? 1 : 0)
     } catch (e) {
-        if (DEBUG) console.error(`sendAudioMuteFeedback -- Failed to send mute state of source ${response.sourceName}:`, e)
+        if (DEBUG) console.error(`sendAudioMuteFeedback -- Failed to send mute state of input ${inputName}:`, e)
     }
 }

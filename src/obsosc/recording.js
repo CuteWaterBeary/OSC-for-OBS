@@ -5,108 +5,101 @@ const DEBUG = process.argv.includes('--enable-log')
 async function processRecording(networks, path, args) {
     if (path[0] === undefined) {
         if (args[0] === undefined) {
-            getRecordingStatus(networks)
+            getRecordStatus(networks)
             return
         }
 
         if (args[0] === 1) {
-            startRecording(networks)
+            startRecord(networks)
         } else if (args[0] === 0) {
-            stopRecording(networks)
+            stopRecord(networks)
         }
     } else {
-        if (path[0] === 'start' && args[0] === 1) {
-            startRecording(networks)
+        if (path[0] === 'start') {
+            if (args[0] === 1) {
+                startRecord(networks)
+            } else if (args[0] === 0) {
+                stopRecord(networks)
+            }
         } else if (path[0] === 'stop' && args[0] === 1) {
-            stopRecording(networks)
+            stopRecord(networks)
         } else if (path[0] === 'pause') {
             if (args[0] === 1) {
-                pauseRecording(networks)
+                pauseRecord(networks)
             } else if (args[0] === 0) {
-                resumeRecording(networks)
+                resumeRecord(networks)
             }
         } else if (path[0] === 'resume' && args[0] === 1) {
-            resumeRecording(networks)
+            resumeRecord(networks)
         } else if (path[0] === 'toggle' && args[0] === 1) {
-            toggleRecording(networks)
+            toggleRecord(networks)
         } else if (path[0] === 'togglePause' && args[0] === 1) {
-            togglePauseRecording(networks)
+            toggleRecordPause(networks)
         }
     }
 }
 
-async function getRecordingStatus(networks) {
+async function getRecordStatus(networks) {
+    const recordPath = '/recording'
+    const recordPausePath = `/recording/pause`
     try {
-        const response = await networks.obs.send('GetRecordingStatus')
+        const { outputActive, ouputPaused } = await networks.obs.call('GetRecordStatus')
         try {
-            networks.oscOut.send('/recording', response.isRecording ? 1 : 0)
+            networks.oscOut.send(recordPath, outputActive ? 1 : 0)
+            networks.oscOut.send(recordPausePath, ouputPaused ? 1 : 0)
         } catch (e) {
-            if (DEBUG) console.error('getRecordingStatus -- Failed to send recording status:', e)
+            if (DEBUG) console.error('getRecordStatus -- Failed to send recording status:', e)
         }
     } catch (e) {
-        if (DEBUG) console.error('getRecordingStatus -- Failed to get recording status:', e)
+        if (DEBUG) console.error('getRecordStatus -- Failed to get recording status:', e)
     }
 }
 
-async function startRecording(networks) {
+async function startRecord(networks) {
     try {
-        await networks.obs.send('StartRecording')
+        await networks.obs.call('StartRecord')
     } catch (e) {
-        if (DEBUG) console.error('startRecording -- Failed to start recording:', e)
+        if (DEBUG) console.error('startRecord -- Failed to start recording:', e)
     }
 }
 
-async function stopRecording(networks) {
+async function stopRecord(networks) {
     try {
-        await networks.obs.send('StopRecording')
+        await networks.obs.call('StopRecord')
     } catch (e) {
-        if (DEBUG) console.error('stopRecording -- Failed to stop recording:', e)
+        if (DEBUG) console.error('stopRecord -- Failed to stop recording:', e)
     }
 }
 
-async function toggleRecording(networks) {
+async function toggleRecord(networks) {
     try {
-        await networks.obs.send('StartStopRecording')
+        await networks.obs.call('ToggleRecord')
     } catch (e) {
-        if (DEBUG) console.error('toggleRecording -- Failed to toggle recording:', e)
+        if (DEBUG) console.error('toggleRecord -- Failed to toggle recording:', e)
     }
 }
 
-async function pauseRecording(networks) {
+async function pauseRecord(networks) {
     try {
-        await networks.obs.send('PauseRecording')
+        await networks.obs.call('PauseRecord')
     } catch (e) {
-        if (DEBUG) console.error('pauseRecording -- Failed to pause recording:', e)
+        if (DEBUG) console.error('pauseRecord -- Failed to pause recording:', e)
     }
 }
 
-async function resumeRecording(networks) {
+async function resumeRecord(networks) {
     try {
-        await networks.obs.send('ResumeRecording')
+        await networks.obs.call('ResumeRecord')
     } catch (e) {
-        if (DEBUG) console.error('resumeRecording -- Failed to resume recording:', e)
+        if (DEBUG) console.error('resumeRecord -- Failed to resume recording:', e)
     }
 }
 
-async function togglePauseRecording(networks) {
+async function toggleRecordPause(networks) {
     try {
-        const response = await networks.obs.send('GetRecordingStatus')
-        if (response.isRecording === false) {
-            if (DEBUG) console.error('togglePauseRecording -- Recording did not start yet')
-            return
-        }
-
-        try {
-            if (response.isRecordingPaused) {
-                await networks.obs.send('ResumeRecording')
-            } else {
-                await networks.obs.send('PauseRecording')
-            }
-        } catch (e) {
-            if (DEBUG) console.error('togglePauseRecording -- Failed to toggle-pause recording:', e)
-        }
+        await networks.obs.call('ToggleRecordPause')
     } catch (e) {
-        if (DEBUG) console.error('togglePauseRecording -- Failed to get recording status:', e)
+        if (DEBUG) console.error('toggleRecordPause -- Failed to toggle-pause recording:', e)
     }
 }
 
@@ -120,9 +113,9 @@ function sendRecordingStateFeedback(networks, state) {
 }
 
 function sendRecordingPauseStateFeedback(networks, state) {
-    const recordingPath = `/recording/pause`
+    const recordPausePath = `/recording/pause`
     try {
-        networks.oscOut.send(recordingPath, state)
+        networks.oscOut.send(recordPausePath, state)
     } catch (e) {
         if (DEBUG) console.error(`sendRecordingPauseStateFeedback -- Failed to send recording pause state feedback:`, e)
     }

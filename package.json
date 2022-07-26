@@ -1,7 +1,7 @@
 {
   "name": "obsosc-app",
   "productName": "OSC for OBS",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Control OBS via OSC, a forked and heavily modified version from jshea2/OSC-for-OBS",
   "main": "src/index.js",
   "scripts": {
@@ -27,6 +27,6 @@
   },
   "dependencies": {
     "node-osc": "^8.0.3",
-    "obs-websocket-js": "^4.0.3"
+    "obs-websocket-js": "^5.0.0"
   }
 }

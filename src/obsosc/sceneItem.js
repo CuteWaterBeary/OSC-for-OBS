@@ -1,65 +1,61 @@
-module.exports = { processSceneItem }
+const { getCurrentProgramScene } = require('./scene')
+module.exports = { processSceneItem, getSceneItemList }
 
 const DEBUG = process.argv.includes('--enable-log')
-const keywords = ['property', 'show', 'hide', 'reset']
+const keywords = ['transform', 'enable', 'disable']
+
 
 async function processSceneItem(networks, path, args) {
     if (path[0] === undefined) {
-        getSceneItemList(args[0])
+        getSceneItemList(networks, args[0])
         return
     }
-
-    // if (path[1] === undefined) {
-    //     // Might be removed later
-    //     getSceneItemProperties(path)
-    //     return
-    // }
-
-    // if (args[0] === undefined) {
-    //     getSceneItemProperties(path)
-    // }
-
-    // path: [scene]/[source|group/source]/[property|show|reset]
 
     for (let i = 1; i < 4; i++) {
         if (path[i] === undefined) return
         if (!keywords.includes(path[i])) continue
 
-        if (path[i] === 'property') {
+        if (path[i] === 'transform') {
             if (path[i + 1] === undefined) {
-                getSceneItemProperties(networks, path.slice(0, i))
+                getSceneItemTransform(networks, path.slice(0, i))
                 return
             }
 
             if (args[0] === undefined) {
-                getSceneItemProperty(networks, path.slice(0, i), path.slice(i + 1))
+                getSceneItemTransformValue(networks, path.slice(0, i), path[i + 1])
             } else {
-                setSceneItemProperty(networks, path.slice(0, i), path.slice(i + 1), args)
+                setSceneItemTransform(networks, path.slice(0, i), path[i + 1], args[0])
             }
-        } else if (path[i] === 'show') {
+        } else if (path[i] === 'enable') {
             if (args[0] === 1 || args[0] === 0) {
-                setSceneItemRender(networks, path.slice(0, i), args[0])
+                setSceneItemEnabled(networks, path.slice(0, i), args[0])
             } else if (args[0] === undefined) {
-                getSceneItemRender(networks, path.slice(0, i))
+                getSceneItemEnabled(networks, path.slice(0, i))
             }
-        } else if (path[i] === 'hide' && args[0] === 1) {
-            setSceneItemRender(networks, path.slice(0, i), 0)
-        } else if (path[i] === 'reset' && args[0] === 1) {
-            resetSceneItem(networks, path.slice(0, i))
+        } else if (path[i] === 'disable' && args[0] === 1) {
+            setSceneItemEnabled(networks, path.slice(0, i), 0)
         }
         return
     }
 }
 
-async function getSceneItemList(networks, scene, sendOSC = true) {
+async function getSceneItemList(networks, sceneName, sendOSC = true) {
+    // Note: OBSWebSocket (v5 or above) could get sources under a group
+    //       by GetGroupSceneItemList, but due to discouragement of
+    //       the use (since group is somewhat broken), we are not 
+    //       implement it for now.
     const sceneItemListPath = '/sceneItem'
+    if (sceneName === undefined) {
+        sceneName = await getCurrentProgramScene(networks, false)
+    }
+
     try {
-        const response = await networks.obs.send('GetSceneItemList', scene !== undefined ? { sceneName: scene } : undefined)
+        const { sceneItems } = await networks.obs.call('GetSceneItemList', { sceneName })
+        // NOTE: It seems that OBSWebSocket (v5.0.0 at this point) list scene items from bottom to top
+        sceneItems.sort((a, b) => b.sceneItemIndex - a.sceneItemIndex)
         if (sendOSC) {
-            const sceneItemList = response.sceneItems.flatMap(sceneItem => sceneItem.sourceName)
-            // Note: OBSWebSocket (v4.x) do not report sources under
-            //       group and cannot be obtained from GetSceneItemProperties
-            //       because SceneItemTransform have no name/item property
+            const sceneItemList = sceneItems.flatMap(sceneItem => sceneItem.sourceName)
+
             try {
                 // TODO: Add option to add scene name before source name
                 networks.oscOut.send(sceneItemListPath, sceneItemList)
@@ -67,235 +63,110 @@ async function getSceneItemList(networks, scene, sendOSC = true) {
                 if (DEBUG) console.error('getSceneItemList -- Failed to send scene item list', e)
             }
         }
-        return response
+
+        return sceneItems
     } catch (e) {
         if (DEBUG) console.error('getSceneItemList -- Failed to get scene item list', e)
     }
 }
 
-async function getSceneItemProperties(networks, path, sendOSC = true) {
-    let sceneItemPropertiesPath = `/sceneItem/${path.join('/')}`
-    // if (DEBUG) console.info('getSceneItemProperties -- feedback path:', sceneItemPropertiesPath)
-
-    if (path.length === 0 || path.length > 3) {
-        if (DEBUG) console.error('getSceneItemProperties -- Invalid path (too short or too long):', path.join('/'))
-        return
-    }
-
-    let scene, sceneItem
+async function getSceneAndSceneItemId(networks, path) {
+    let sceneName
     if (path.length === 1) {
-        sceneItem = path[0]
+        sceneName = await getCurrentProgramScene(networks, false)
     } else {
-        scene = path[0]
-        sceneItem = path.at(-1)
+        sceneName = path.at(-2)
     }
+
+    if (sceneName === undefined) { return {} }
 
     try {
-        const response = await networks.obs.send('GetSceneItemProperties', { item: sceneItem, ...(scene !== undefined ? { 'scene-name': scene } : {}) })
-        if (path.length === 3) {
-            if (response.parentGroupName !== path[1]) {
-                if (DEBUG) console.error('getSceneItemProperties -- Invalid path (wrong parent group):', path.join('/'))
-                return
-            }
-        }
-
-        if (sendOSC) {
-            // TODO: Add option to send complete path
-            if (false) {
-                const sceneItemList = await getSceneItemList(networks, undefined, false)
-                if (sceneItemList === undefined) {
-                    if (DEBUG) console.error('getSceneItemRender -- Failed to get scene name from getSceneItemList')
-                    return
-                }
-                sceneItemPropertiesPath = `/sceneItem/${sceneItemList.sceneName}${response.parentGroupName !== undefined ? '/' + response.parentGroupName : ''}/${response.name}`
-            }
-
-            try {
-                const propertyList = parsePropertyList(response)
-                networks.oscOut.send(sceneItemPropertiesPath, propertyList)
-            } catch (e) {
-                if (DEBUG) console.error('getSceneItemProperties -- Failed to send scene item properties:', e)
-            }
-        }
-        return response
+        const { sceneItemId } = await networks.obs.call('GetSceneItemId', { sceneName, sourceName: path.at(-1) })
+        return { sceneName, sceneItemId }
     } catch (e) {
-        if (DEBUG) console.error('getSceneItemProperties -- Failed to get scene item properties:', e)
+        if (DEBUG) console.error('getSceneItemId -- Failed to get scene item ID:', e)
+        return {}
     }
 }
 
-function parsePropertyList(properties) {
-    const propertyList = []
 
-    for (const key in properties) {
-        if (typeof (properties[key]) === 'object') {
-            for (const subKey in properties[key]) {
-                propertyList.push(`${key}/${subKey}`)
+async function getSceneItemTransform(networks, path, sendOSC = true) {
+    const sceneItemTransformPath = `/sceneItem/${path.join('/')}/transform`
+    const { sceneName, sceneItemId } = await getSceneAndSceneItemId(networks, path)
+    if (sceneItemId === undefined) return
+
+    try {
+        const { sceneItemTransform } = await networks.obs.call('GetSceneItemTransform', { sceneName, sceneItemId })
+        if (sendOSC) {
+            try {
+                networks.oscOut.send(sceneItemTransformPath, Object.keys(sceneItemTransform))
+            } catch (e) {
+                if (DEBUG) console.error('getSceneItemTransform -- Failed to send scene item transform info:', e)
             }
-        } else {
-            propertyList.push(key)
         }
-    }
 
-    return propertyList
+        return sceneItemTransform
+    } catch (e) {
+        if (DEBUG) console.error('getSceneItemTransform -- Failed to get scene item transform info:', e)
+    }
 }
 
-async function getSceneItemProperty(networks, path, propertyPath, sendOSC = true) {
-    if (propertyPath === undefined || propertyPath.length === 0) return
-    if (propertyPath.length > 3) {
-        if (DEBUG) console.error('getSceneItemProperty -- Invalid property:', propertyPath.join('/'))
-        return
-    }
-    let SceneItemPropertyPath = `/sceneItem/${path.join('/')}/property/${propertyPath.join('/')}`
-    const properties = await getSceneItemProperties(networks, path, false)
-    if (properties === undefined) return
-
-    let property = properties
-    for (const p of propertyPath) {
-        property = property[p]
-        if (property === undefined) {
-            if (DEBUG) console.error('getSceneItemProperty -- Unknown property:', propertyPath.join('/'))
-            return
-        }
-    }
+async function getSceneItemTransformValue(networks, path, transform, sendOSC = true) {
+    const sceneItemTransformValuePath = `/sceneItem/${path.join('/')}/transform/${transform}`
+    const sceneItemTransform = await getSceneItemTransform(networks, path, false)
+    if (sceneItemTransform[transform] === undefined) return
 
     if (sendOSC) {
-        // TODO: Add option to send complete path
-        if (false) {
-            const sceneItemList = await getSceneItemList(networks, undefined, false)
-            if (sceneItemList === undefined) {
-                if (DEBUG) console.error('getSceneItemProperty -- Failed to get scene name from getSceneItemList')
-                return
-            }
-            SceneItemPropertyPath = `/sceneItem/${sceneItemList.sceneName}${properties.parentGroupName !== undefined ? '/' + properties.parentGroupName : ''}/${properties.name}/property/${propertyPath.join('/')}`
-        }
-
-        if (typeof (property) !== 'object') {
-            try {
-                networks.oscOut.send(SceneItemPropertyPath, property)
-            } catch (e) {
-                if (DEBUG) console.error(`getSceneItemProperty -- Failed to send property ${propertyPath.join('/')}:`, e)
-            }
-        } else {
-            for (const key in property) {
-                if (typeof (property[key]) === 'object') {
-                    if (DEBUG) console.error(`getSceneItemProperty -- Property ${propertyPath.join('/')} is not a single-level object`)
-                    return
-                }
-            }
-
-            // TODO: Add option to toggle the path to send single-level object's values
-            if (true) {
-                for (const key in property) {
-                    try {
-                        networks.oscOut.send(SceneItemPropertyPath.concat('/', key), property[key])
-                    } catch (e) {
-                        if (DEBUG) console.error(`getSceneItemProperty -- Failed to send property ${propertyPath.join('/')}/${key}:`, e)
-                    }
-                }
-            } else {
-                try {
-                    networks.oscOut.send(SceneItemPropertyPath, Object.values(property))
-                } catch (e) {
-                    if (DEBUG) console.error(`getSceneItemProperty -- Failed to send property ${propertyPath.join('/')}:`, e)
-                }
-            }
+        try {
+            networks.oscOut.send(sceneItemTransformValuePath, sceneItemTransform[transform])
+        } catch (e) {
+            if (DEBUG) console.error('getSceneItemTransformValue -- Failed to send scene item transform value:', e)
         }
     }
 
-    return property
+    return sceneItemTransform[transform]
 }
 
-async function setSceneItemProperty(networks, path, propertyPath, args) {
-    if (path.length === 0 || path.length > 3) {
-        if (DEBUG) console.error('setSceneItemProperty -- Invalid path (too short or too long):', path.join('/'))
-        return
-    }
-    if (propertyPath.length === 0 || propertyPath.length > 2) {
-        if (DEBUG) console.error('setSceneItemProperty -- Invalid property path (too short or too long):', propertyPath.join('/'))
-        return
-    }
+// U
+async function setSceneItemTransform(networks, path, transform, value) {
+    if (typeof (transform) !== 'string' || value === undefined) return
+    const { sceneName, sceneItemId } = await getSceneAndSceneItemId(networks, path)
+    if (sceneItemId === undefined) return
 
-    const properties = await getSceneItemProperties(networks, path, false)
-    if (properties === undefined) return
+    const sceneItemTransform = {}
+    sceneItemTransform[transform] = value
 
-    if (path.length !== 1) {
-        properties['scene-name'] = path[0]
-    }
-    properties.item = properties.name
-
-
-    let property = properties
-    let propertyParent
-    for (const p of propertyPath) {
-        propertyParent = property
-        property = property[p]
-        if (property === undefined) {
-            if (DEBUG) console.error('setSceneItemProperty -- Unknown property:', propertyPath.join('/'))
-            return
-        }
-    }
-
-    if (typeof (property) !== 'object') {
-        propertyParent[propertyPath.at(-1)] = args[0]
-    } else if (true) {
-        if (args.length !== Object.keys(property).length) {
-            if (DEBUG) console.error(`setSceneItemProperty -- Number of arguments (${args.length}) not match the number of child properties (${Object.keys(property).length})`)
-            return
-        }
-        let i = 0
-        for (const key in property) {
-            property[key] = args[i]
-            i++
-        }
-    }
-
+    console.info(sceneItemTransform)
     try {
-        await networks.obs.send('SetSceneItemProperties', properties)
+        await networks.obs.call('SetSceneItemTransform', { sceneName, sceneItemId, sceneItemTransform })
     } catch (e) {
-        if (DEBUG) console.error(`setSceneItemProperty -- Failed to set scene item property ${propertyPath.join('/')}:`, e)
+        if (DEBUG) console.error('setSceneItemTransform -- Failed to set scene item transform:', e)
     }
 }
 
-async function setSceneItemRender(networks, path, render) {
-    const properties = await getSceneItemProperties(networks, path, false)
-    if (properties === undefined) return
+async function getSceneItemEnabled(networks, path) {
+    let sceneItemEnablePath = `/sceneItem/${path.join('/')}/enable`
+    const { sceneName, sceneItemId } = await getSceneAndSceneItemId(networks, path)
+    if (sceneItemId === undefined) return
 
     try {
-        networks.obs.send('SetSceneItemRender', { source: path.at(-1), render: render ? true : false, ...((path.length > 1) ? { 'scene-name': path[0] } : {}) })
-    } catch (e) {
-        if (DEBUG) console.error('setSceneItemRender -- Failed to set scene item render state:', e)
-    }
-}
-
-async function getSceneItemRender(networks, path) {
-    let sceneItemRenderPath = `/sceneItem/${path.join('/')}/show`
-    const properties = await getSceneItemProperties(networks, path, false)
-    if (properties === undefined) return
-
-    // TODO: Add option to send complete path
-    if (false) {
-        const sceneItemList = await getSceneItemList(networks, undefined, false)
-        if (sceneItemList === undefined) {
-            if (DEBUG) console.error('getSceneItemRender -- Failed to get scene name from getSceneItemList')
-            return
+        const { sceneItemEnabled } = await networks.obs.call('GetSceneItemEnabled', { sceneName, sceneItemId })
+        try {
+            networks.oscOut.send(sceneItemEnablePath, sceneItemEnabled)
+        } catch (e) {
+            if (DEBUG) console.error('getSceneItemEnabled -- Failed to send scene item enable state:', e)
         }
-        sceneItemRenderPath = `/sceneItem/${sceneItemList.sceneName}${properties.parentGroupName !== undefined ? '/' + properties.parentGroupName : ''}/${properties.name}/show`
-    }
-
-    try {
-        networks.oscOut.send(sceneItemRenderPath, properties.visible ? 1 : 0)
     } catch (e) {
-        if (DEBUG) console.error('setSceneItemRender -- Failed to send scene item render state:', e)
+        if (DEBUG) console.error('getSceneItemEnabled -- Failed to get scene item enable state:', e)
     }
 }
-
-async function resetSceneItem(networks, path) {
-    const properties = await getSceneItemProperties(networks, path, false)
-    if (properties === undefined) return
+async function setSceneItemEnabled(networks, path, state) {
+    const { sceneName, sceneItemId } = await getSceneAndSceneItemId(networks, path)
+    if (sceneItemId === undefined) return
 
     try {
-        await networks.obs.send('ResetSceneItem', { item: path.at(-1), ...((path.length > 1) ? { 'scene-name': path[0] } : {}) })
+        await networks.obs.call('SetSceneItemEnabled', { sceneName, sceneItemId, sceneItemEnabled: (state === 1) ? true : false })
     } catch (e) {
-        if (DEBUG) console.error('resetSceneItem -- Failed to reset scene item:', e)
+        if (DEBUG) console.error('setSceneItemEnabled -- Failed to set scene item enable state:', e)
     }
 }

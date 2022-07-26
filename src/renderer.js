@@ -25,22 +25,21 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     for (const key in configJson.misc) {
         const iSwitch = document.querySelector(`#switch-${key}`)
-        if (iSwitch) {
-            if (typeof(configJson.misc[key]) === 'object') {
-                for (const subkey in configJson.misc[key]) {
-                    if (subkey === 'enabled') continue
-                    const input = document.querySelector(`#${key}-${subkey}`)
-                    if (input) input.value = configJson.misc[key][subkey]
-                }
-                
-                if(configJson.misc[key].enabled === true) {
-                    const event = new MouseEvent('click', { button: -1 })
-                    iSwitch.dispatchEvent(event)
-                }
-            } else if (configJson.misc[key] === true) {
+        if (!iSwitch) { return }
+        if (typeof(configJson.misc[key]) === 'object') {
+            for (const subkey in configJson.misc[key]) {
+                if (subkey === 'enabled') continue
+                const input = document.querySelector(`#${key}-${subkey}`)
+                if (input) input.value = configJson.misc[key][subkey]
+            }
+            
+            if(configJson.misc[key].enabled === true) {
                 const event = new MouseEvent('click', { button: -1 })
                 iSwitch.dispatchEvent(event)
             }
+        } else if (configJson.misc[key] === true) {
+            const event = new MouseEvent('click', { button: -1 })
+            iSwitch.dispatchEvent(event)
         }
     }
 })

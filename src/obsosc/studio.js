@@ -1,3 +1,5 @@
+const { setCurrentSceneTransition, setCurrentSceneTransitionDuration, setTBarPosition } = require('./transition')
+
 module.exports = { processStudioMode, sendStudioModeStateFeedback, sendStudioPreviewSceneFeedback }
 
 const DEBUG = process.argv.includes('--enable-log')
@@ -5,89 +7,86 @@ const DEBUG = process.argv.includes('--enable-log')
 async function processStudioMode(networks, path, args) {
     if (path[0] === undefined) {
         if (args[0] === undefined) {
-            getStudioModeStatus(networks)
+            getStudioModeEnabled(networks)
             return
         }
 
         if (args[0] === 1) {
-            enableStudioMode(networks)
+            setStudioModeEnabled(networks)
         } else if (args[0] === 0) {
             disableStudioMode(networks)
         }
     } else {
-        if (path[0] === 'enable' && args[0] === 1) {
-            enableStudioMode(networks)
+        if (path[0] === 'enable') {
+            setStudioModeEnabled(networks, args[0])
         } else if (path[0] === 'disable' && args[0] === 1) {
-            disableStudioMode(networks)
+            setStudioModeEnabled(networks, 0)
         } else if (path[0] === 'toggle' && args[0] === 1) {
             toggleStudioMode(networks)
         } else if (path[0] === 'preview') {
             if (args[0] === undefined) {
-                getPreviewScene(networks)
+                getCurrentPreviewScene(networks)
             } else {
-                setPreviewScene(networks, args[0])
+                setCurrentPreviewScene(networks, args[0])
             }
         } else if (path[0] === 'transition') {
             transitionToProgram(networks, args)
+        } else if (path[0] === 'cursor') {
+            setTBarPosition(networks, args[0])
         }
     }
 }
 
-async function getStudioModeStatus(networks) {
+async function getStudioModeEnabled(networks, sendOSC = true) {
+    const studioEnabledPath = '/studio'
     try {
-        const response = await networks.obs.send('GetStudioModeStatus')
-        try {
-            networks.oscOut.send('/studio', response['studio-mode'] ? 1 : 0)
-        } catch (e) {
-            if (DEBUG) console.error('getStudioModeStatus -- Failed to send studio mode status:', e)
+        const { studioModeEnabled } = await networks.obs.call('GetStudioModeEnabled')
+        if (sendOSC) {
+            try {
+                networks.oscOut.send(studioEnabledPath, studioModeEnabled ? 1 : 0)
+            } catch (e) {
+                if (DEBUG) console.error('getStudioModeEnabled -- Failed to send studio mode status:', e)
+            }
         }
+
+        return studioModeEnabled
     } catch (e) {
-        if (DEBUG) console.error('getStudioModeStatus -- Failed to get studio mode status:', e)
+        if (DEBUG) console.error('getStudioModeEnabled -- Failed to get studio mode status:', e)
     }
 }
 
-async function enableStudioMode(networks) {
+async function setStudioModeEnabled(networks, state) {
     try {
-        await networks.obs.send('EnableStudioMode')
+        await networks.obs.call('SetStudioModeEnabled', { studioModeEnabled: state ? true : false })
     } catch (e) {
         if (DEBUG) console.error('enableStudioMode -- Failed to enable studio mode:', e)
     }
 }
 
-async function disableStudioMode(networks) {
-    try {
-        await networks.obs.send('DisableStudioMode')
-    } catch (e) {
-        if (DEBUG) console.error('disableStudioMode -- Failed to disable studio mode:', e)
-    }
-}
-
 async function toggleStudioMode(networks) {
-    try {
-        await networks.obs.send('ToggleStudioMode')
-    } catch (e) {
-        if (DEBUG) console.error('toggleStudioMode -- Failed to toggle studio mode:', e)
-    }
+    const studioModeEnabled = await getStudioModeEnabled(networks, false)
+    getStudioModeEnabled(networks, !studioModeEnabled)
 }
 
-async function getPreviewScene(networks) {
+async function getCurrentPreviewScene(networks) {
+    const studioPreviewScenePath = '/studio/preview'
     try {
-        const response = await networks.obs.send('GetPreviewScene')
+        const { currentPreviewSceneName } = await networks.obs.call('GetCurrentPreviewScene')
         try {
-            networks.oscOut.send('/studio/preview', response.name)
+            networks.oscOut.send(studioPreviewScenePath, currentPreviewSceneName)
         } catch (e) {
-            if (DEBUG) console.error('getPreviewScene -- Failed to send preview scene:', e)
+            if (DEBUG) console.error('getCurrentPreviewScene -- Failed to send preview scene:', e)
         }
     } catch (e) {
-        if (DEBUG) console.error('getPreviewScene -- Failed to get preview scene:', e)
+        if (DEBUG) console.error('getCurrentPreviewScene -- Failed to get preview scene:', e)
     }
 }
 
-async function setPreviewScene(networks, scene) {
+async function setCurrentPreviewScene(networks, sceneName) {
     try {
-        await networks.obs.send('SetPreviewScene', { 'scene-name': scene })
+        await networks.obs.call('SetCurrentPreviewScene', { sceneName })
     } catch (e) {
-        if (DEBUG) console.error('setPreviewScene -- Failed to set preview scene:', e)
+        if (DEBUG) console.error('setCurrentPreviewScene -- Failed to set preview scene:', e)
     }
 }
 
@@ -97,40 +96,41 @@ async function transitionToProgram(networks, args) {
     }
 
     if (typeof (args[0]) === 'number') {
-        if (args[0] !== 1) {
-            return
-        }
-
-        try {
-            await networks.obs.send('TransitionToProgram')
-        } catch (e) {
-            if (DEBUG) console.error('transitionToProgram -- Failed to start transition:', e)
-        }
+        if (args[0] !== 1) return
+        triggerStudioModeTransition(networks)
     } else if (typeof (args[0]) === 'string') {
-        try {
-            await networks.obs.send('TransitionToProgram', { 'with-transition': { name: args[0], ...(typeof (args[1]) === 'number' ? { duration: args[1] } : {}) } })
-        } catch (e) {
-            if (DEBUG) console.error('transitionToProgram -- Failed to start transition:', e)
+        await setCurrentSceneTransition(networks, args[0])
+        if (typeof(args[1]) === 'number') {
+            await setCurrentSceneTransitionDuration (networks, args[1])
         }
+        triggerStudioModeTransition(networks)
     } else {
         if (DEBUG) console.error('transitionToProgram -- Invalid arguments:', args)
     }
 }
 
-function sendStudioModeStateFeedback(networks, response) {
+async function triggerStudioModeTransition(networks) {
+    try {
+        await networks.obs.call('TriggerStudioModeTransition')
+    } catch (e) {
+        if (DEBUG) console.error('triggerStudioModeTransition -- Failed to trigger studio mode transition:', e)
+    }
+}
+
+function sendStudioModeStateFeedback(networks, state) {
     const studioPath = `/studio`
     try {
-        networks.oscOut.send(studioPath, response['new-state'] ? 1 : 0)
+        networks.oscOut.send(studioPath, state ? 1 : 0)
     } catch (e) {
         if (DEBUG) console.error(`sendStudioModeStateFeedback -- Failed to send studio mode state feedback:`, e)
     }
 }
 
-function sendStudioPreviewSceneFeedback(networks, response) {
+function sendStudioPreviewSceneFeedback(networks, sceneName) {
     const previewPath = `/studio/preview`
-        try {
-            networks.oscOut.send(previewPath, response['scene-name'])
-        } catch (e) {
-            if (DEBUG) console.error(`sendStudioPreviewSceneFeedback -- Failed to send current preview scene feedback:`, e)
-        }
+    try {
+        networks.oscOut.send(previewPath, sceneName)
+    } catch (e) {
+        if (DEBUG) console.error(`sendStudioPreviewSceneFeedback -- Failed to send current preview scene feedback:`, e)
+    }
 }

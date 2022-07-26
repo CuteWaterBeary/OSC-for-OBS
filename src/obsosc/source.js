@@ -1,3 +1,4 @@
+
 module.exports = {processSource, getSourceList}
 
 const DEBUG = process.argv.includes('--enable-log')

@@ -1,6 +1,20 @@
 function setSwitch() {
+    const basicSwitch = (configName, state, event) => {
+        if (state === 1) {
+            if (event.button !== -1) {
+                window.electronAPI.updateMiscConfig(configName, true)
+            }
+        } else {
+            if (event.button !== -1) {
+                window.electronAPI.updateMiscConfig(configName, false)
+            }
+        }
+    }
+
     const switchFunctions = {
         notifyActiveScene: (state, event) => {
+            basicSwitch('notifyActiveScene', state, event)
+            return
             const sceneFeedback = document.querySelector('#custom-scene-feedback')
             if (state === 1) {
                 sceneFeedback.classList.remove('disabled')
@@ -13,6 +27,27 @@ function setSwitch() {
                     window.electronAPI.updateMiscConfig('notifyActiveScene', false)
                 }
             }
+        },
+        notifySceneInputs: (state, event) => {
+            basicSwitch('notifySceneInputs', state, event)
+        },
+        notifyVolumeChange: (state, event) => {
+            basicSwitch('notifyVolumeChange', state, event)
+        },
+        notifyMuteState: (state, event) => {
+            basicSwitch('notifyMuteState', state, event)
+        },
+        notifyVirtualCamState: (state, event) => {
+            basicSwitch('notifyVirtualCamState', state, event)
+        },
+        notifyRecordingState: (state, event) => {
+            basicSwitch('notifyRecordingState', state, event)
+        },
+        notifyStudioModeState: (state, event) => {
+            basicSwitch('notifyStudioModeState', state, event)
+        },
+        notifyStudioPreviewScene: (state, event) => {
+            basicSwitch('notifyStudioPreviewScene', state, event)
         },
         useCustomPath: (state, event) => {
             const prefixInput = document.querySelector('#useCustomPath-prefix')
@@ -41,16 +76,8 @@ function setSwitch() {
                 }
             }
         },
-        useDbForVolume: (state, event) => {
-            if (state === 1) {
-                if (event.button !== -1) {
-                    window.electronAPI.updateMiscConfig('useDbForVolume', true)
-                }
-            } else {
-                if (event.button !== -1) {
-                    window.electronAPI.updateMiscConfig('useDbForVolume', false)
-                }
-            }
+        enableVolumeDbOutput: (state, event) => {
+            basicSwitch('enableVolumeDbOutput', state, event)
         }
     }
 
