@@ -14,22 +14,12 @@ function setSwitch() {
     const switchFunctions = {
         notifyActiveScene: (state, event) => {
             basicSwitch('notifyActiveScene', state, event)
-            return
-            const sceneFeedback = document.querySelector('#custom-scene-feedback')
-            if (state === 1) {
-                sceneFeedback.classList.remove('disabled')
-                if (event.button !== -1) {
-                    window.electronAPI.updateMiscConfig('notifyActiveScene', true)
-                }
-            } else {
-                sceneFeedback.classList.add('disabled')
-                if (event.button !== -1) {
-                    window.electronAPI.updateMiscConfig('notifyActiveScene', false)
-                }
-            }
         },
         notifySceneInputs: (state, event) => {
             basicSwitch('notifySceneInputs', state, event)
+        },
+        notifySceneItems: (state, event) => {
+            basicSwitch('notifySceneItems', state, event)
         },
         notifyVolumeChange: (state, event) => {
             basicSwitch('notifyVolumeChange', state, event)
@@ -42,6 +32,9 @@ function setSwitch() {
         },
         notifyRecordingState: (state, event) => {
             basicSwitch('notifyRecordingState', state, event)
+        },
+        notifyStreamingState: (state, event) => {
+            basicSwitch('notifyStreamingState', state, event)
         },
         notifyStudioModeState: (state, event) => {
             basicSwitch('notifyStudioModeState', state, event)

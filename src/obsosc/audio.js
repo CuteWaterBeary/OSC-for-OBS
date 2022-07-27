@@ -1,6 +1,7 @@
-// const { getSourceList } = require('./source')
 const { getCurrentProgramScene } = require('./scene')
 const { getSceneItemList } = require('./sceneItem')
+const { getInputList } = require('./input')
+
 module.exports = { updateAudioInputKindList, processSourceAudio, getAudioInputList, getSceneAudioInputList, sendSceneAudioInputFeedback, sendAudioInputVolumeFeedback, sendAudioMuteFeedback }
 
 const DEBUG = process.argv.includes('--enable-log')
@@ -42,25 +43,6 @@ async function processSourceAudio(networks, path, args) {
         } else {
             setInputMute(networks, path[0], args[0])
         }
-    }
-}
-
-async function getInputList(networks, sendOSC = true) {
-    const inputListPath = '/input'
-    try {
-        const { inputs } = await networks.obs.call('GetInputList')
-
-        if (sendOSC) {
-            try {
-                networks.oscOut.send(inputListPath, inputs.flatmap(input => input.inputName))
-            } catch (e) {
-                if (DEBUG) console.error('getInputList -- Failed to send input list:', e)
-            }
-        }
-
-        return inputs
-    } catch (e) {
-        if (DEBUG) console.error('getInputList -- Failed to get input list:', e)
     }
 }
 
@@ -123,7 +105,6 @@ async function getInputVolume(networks, inputName, useVolumeDb = false) {
 }
 
 async function setInputVolume(networks, inputName, inputVolume, useVolumeDb = false) {
-    console.info(`Input name: ${inputName}, volume: ${inputVolume}, dB: ${useVolumeDb}`)
     if (useVolumeDb) {
         try {
             await networks.obs.call('SetInputVolume', { inputName, inputVolumeDb: inputVolume })
@@ -215,7 +196,7 @@ async function getSceneAudioInputList(networks, sceneName) {
     sceneAudioInputs.sort()
     if (DEBUG) console.info('Scene audio list:', sceneAudioInputs)
     try {
-        networks.oscOut.send(sceneAudioPath, sceneName, sceneAudioInputs)
+        networks.oscOut.send(sceneAudioPath, sceneAudioInputs)
     } catch (e) {
         if (DEBUG) console.error('sendSceneAudioInputFeedback -- Failed to send scene audio feedback:', e)
     }

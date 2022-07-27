@@ -1,9 +1,9 @@
 const { getCurrentProgramScene } = require('./scene')
-module.exports = { processSceneItem, getSceneItemList }
+
+module.exports = { processSceneItem, getSceneItemList, sendSceneItemFeedback }
 
 const DEBUG = process.argv.includes('--enable-log')
 const keywords = ['transform', 'enable', 'disable']
-
 
 async function processSceneItem(networks, path, args) {
     if (path[0] === undefined) {
@@ -89,7 +89,6 @@ async function getSceneAndSceneItemId(networks, path) {
     }
 }
 
-
 async function getSceneItemTransform(networks, path, sendOSC = true) {
     const sceneItemTransformPath = `/sceneItem/${path.join('/')}/transform`
     const { sceneName, sceneItemId } = await getSceneAndSceneItemId(networks, path)
@@ -127,7 +126,6 @@ async function getSceneItemTransformValue(networks, path, transform, sendOSC = t
     return sceneItemTransform[transform]
 }
 
-// U
 async function setSceneItemTransform(networks, path, transform, value) {
     if (typeof (transform) !== 'string' || value === undefined) return
     const { sceneName, sceneItemId } = await getSceneAndSceneItemId(networks, path)
@@ -135,8 +133,6 @@ async function setSceneItemTransform(networks, path, transform, value) {
 
     const sceneItemTransform = {}
     sceneItemTransform[transform] = value
-
-    console.info(sceneItemTransform)
     try {
         await networks.obs.call('SetSceneItemTransform', { sceneName, sceneItemId, sceneItemTransform })
     } catch (e) {
@@ -160,6 +156,7 @@ async function getSceneItemEnabled(networks, path) {
         if (DEBUG) console.error('getSceneItemEnabled -- Failed to get scene item enable state:', e)
     }
 }
+
 async function setSceneItemEnabled(networks, path, state) {
     const { sceneName, sceneItemId } = await getSceneAndSceneItemId(networks, path)
     if (sceneItemId === undefined) return
@@ -169,4 +166,8 @@ async function setSceneItemEnabled(networks, path, state) {
     } catch (e) {
         if (DEBUG) console.error('setSceneItemEnabled -- Failed to set scene item enable state:', e)
     }
+}
+
+async function sendSceneItemFeedback(networks, sceneName) {
+    getSceneItemList(networks, sceneName)
 }

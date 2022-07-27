@@ -1,11 +1,11 @@
-module.exports = { processScene, processActiveScene, getCurrentProgramScene, sendActiveSceneFeedback, sendSceneCompletedFeedback }
+module.exports = { processScene, processActiveScene, getCurrentProgramScene, getSceneList, sendActiveSceneFeedback, sendSceneCompletedFeedback }
 
 const DEBUG = process.argv.includes('--enable-log')
 
 async function processScene(networks, path, args) {
     if (path[0] === undefined) {
         if (args[0] === undefined) {
-            getCurrentProgramScene(networks)
+            getSceneList(networks)
         } else {
             setCurrentProgramScene(networks, args[0])
         }
@@ -25,7 +25,23 @@ async function processActiveScene(networks, path, args) {
     }
 }
 
-// WIP
+async function getSceneList(networks, sendOSC = true) {
+    const sceneListPath = '/scene'
+    try {
+        const { scenes } = await networks.obs.call('GetSceneList')
+        if (sendOSC) {
+            try {
+                networks.oscOut.send(sceneListPath, scenes)
+            } catch (e) {
+                if (DEBUG) console.error('getSceneList -- Failed to send scene list:', e)
+            }
+        }
+        return scenes
+    } catch (e) {
+        if (DEBUG) console.error('getSceneList -- Failed to get scene list:', e)
+    }
+}
+
 async function getCurrentProgramScene(networks, sendOSC = true) {
     const currentScenePath = '/activeScene'
     try {
@@ -37,8 +53,6 @@ async function getCurrentProgramScene(networks, sendOSC = true) {
                 if (DEBUG) console.error('getCurrentProgramScene -- Failed to sent current scene:', e)
             }
         }
-
-        // sendSceneAudioFeedback(networks, currentProgramSceneName)
         return currentProgramSceneName
     } catch (e) {
         if (DEBUG) console.error('getCurrentProgramScene -- Failed to get current scene:', e)
@@ -62,23 +76,6 @@ async function setCurrentProgramScene(networks, sceneName) {
         await networks.obs.call('SetCurrentProgramScene', { sceneName: sceneName })
     } catch (e) {
         if (DEBUG) console.error(`setCurrentProgramScene - Failed to set scene ${sceneName}:`, e)
-    }
-}
-
-async function getSceneList(networks, sendOSC = true) {
-    const sceneListPath = '/sceneList'
-    try {
-        const { scenes } = await networks.obs.call('GetSceneList')
-        if (sendOSC) {
-            try {
-                networks.oscOut.send(sceneListPath, scenes)
-            } catch (e) {
-                if (DEBUG) console.error('getSceneList -- Failed to send scene list:', e)
-            }
-        }
-        return scenes
-    } catch (e) {
-        if (DEBUG) console.error('getSceneList -- Failed to get scene list:', e)
     }
 }
 

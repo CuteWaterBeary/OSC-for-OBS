@@ -27,8 +27,6 @@ async function processTransition(networks, path, args) {
     } else if (path[0] === 'cursor') {
         if (args[0] === undefined) {
             getCurrentSceneTransitionCursor(networks)
-        } else {
-            // setTBarPosition(networks, args[0], args[1])
         }
     }
 }

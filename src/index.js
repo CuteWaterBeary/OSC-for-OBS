@@ -390,6 +390,7 @@ function createDevWindow() {
     mainWindow.on('move', function () {
         const windowBounds = mainWindow.getBounds()
         const devWindow = BrowserWindow.fromId(devWindowId)
+        if (!devWindow) return
         devWindow.setPosition(windowBounds.x + windowBounds.width, windowBounds.y)
     })
 

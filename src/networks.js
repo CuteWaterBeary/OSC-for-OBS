@@ -5,11 +5,13 @@ const { Client, Server } = require('node-osc')
 
 const { processScene, processActiveScene, sendActiveSceneFeedback, sendSceneCompletedFeedback } = require('./obsosc/scene')
 const { processSource } = require('./obsosc/source')
-const { processSceneItem } = require('./obsosc/sceneItem')
+const { processSceneItem, sendSceneItemFeedback } = require('./obsosc/sceneItem')
 const { updateAudioInputKindList, processSourceAudio, getSceneAudioInputList, sendSceneAudioInputFeedback, sendAudioInputVolumeFeedback, sendAudioMuteFeedback } = require('./obsosc/audio')
 const { processRecording, sendRecordingStateFeedback, sendRecordingPauseStateFeedback } = require('./obsosc/recording')
 const { processStudioMode, sendStudioModeStateFeedback, sendStudioPreviewSceneFeedback } = require('./obsosc/studio')
 const { processVirtualCam, sendVirtualCamStateFeedback } = require('./obsosc/virtualCam')
+const { processStreaming, sendStreamingStateFeedback } = require('./obsosc/streaming')
+const { processInput } = require('./obsosc/input')
 const { processOutput } = require('./obsosc/output')
 const { processTransition } = require('./obsosc/transition')
 
@@ -160,7 +162,6 @@ async function setUpOBSOSC() {
 
     setUpOBSWebSocketListener()
     updateAudioInputKindList({ obs, oscIn, oscOut, miscConfig })
-    // getAudioInputList({ obs, oscIn, oscOut, miscConfig })
 
     oscIn.on('message', (message) => {
         if (DEBUG) console.info('New OSC message:', message)
@@ -168,7 +169,6 @@ async function setUpOBSOSC() {
     })
 }
 
-// TODO: Revalidate every event listeners
 async function setUpOBSWebSocketListener() {
     const networks = { obs, oscIn, oscOut, miscConfig }
 
@@ -182,8 +182,12 @@ async function setUpOBSWebSocketListener() {
     obs.on('CurrentProgramSceneChanged', async ({ sceneName }) => {
         if (!miscConfig.notifyActiveScene) return
         sendSceneCompletedFeedback(networks, sceneName)
-        if (!miscConfig.notifySceneInputs) return
-        sendSceneAudioInputFeedback(networks, sceneName)
+        if (miscConfig.notifySceneInputs) {
+            sendSceneAudioInputFeedback(networks, sceneName)
+        }
+        if (miscConfig.notifySceneItems) {
+            sendSceneItemFeedback(networks, sceneName)
+        }
     })
 
     // obs.once('InputVolumeMeters', response => {
@@ -206,7 +210,16 @@ async function setUpOBSWebSocketListener() {
         sendVirtualCamStateFeedback(networks, outputActive ? 1 : 0)
     })
 
-    obs.on('RecordStateChanged', ({ outputActive, outputState }) => {
+    obs.on('StreamStateChanged', ({ outputState }) => {
+        if (!miscConfig.notifyStreamingState) return
+        if (outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED') {
+            sendStreamingStateFeedback(networks, 1)
+        } else if (outputState === 'OBS_WEBSOCKET_OUTPUT_STOPPED') {
+            sendStreamingStateFeedback(networks, 0)
+        }
+    })
+
+    obs.on('RecordStateChanged', ({ outputState }) => {
         if (!notifyRecordingState.notifyRecordingState) return
         if (outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED') {
             sendRecordingStateFeedback(networks, 1)
@@ -245,49 +258,36 @@ async function processOSCInMessage(message) {
     if (path.at(-1) === '') path.pop()
 
     if (path[0] === 'scene') {
-        // U
         processScene(networks, path.slice(1), message.slice(1))
     } else if (path[0] === 'activeScene') {
-        // U
         processActiveScene(networks, path.slice(1), message.slice(1))
     } else if (path[0] === 'source') {
-        // TODO: Replace with inputs
         processSource(networks, path.slice(1), message.slice(1))
     } else if (path[0] === 'sceneItem') {
-        // U
         processSceneItem(networks, path.slice(1), message.slice(1))
+    } else if (path[0] === 'input') {
+        processInput(networks, path.slice(1), message.slice(1))
     } else if (path[0] === 'audio') {
-        // U
         processSourceAudio(networks, path.slice(1), message.slice(1))
     } else if (path[0] === 'sceneAudio') {
-        // U
         getSceneAudioInputList(networks)
-    } else if (path[0] === 'media') {
-
-    } else if (path[0] === 'profile') {
-
-    } else if (path[0] === 'recording') {
-        // U
-        processRecording(networks, path.slice(1), message.slice(1))
-    } else if (path[0] === 'sceneCollection') {
-
-    } else if (path[0] === 'stream') {
-
     } else if (path[0] === 'studio') {
         processStudioMode(networks, path.slice(1), message.slice(1))
     } else if (path[0] === 'transition') {
         processTransition(networks, path.slice(1), message.slice(1))
+    } else if (path[0] === 'recording') {
+        processRecording(networks, path.slice(1), message.slice(1))
+    } else if (path[0] === 'streaming') {
+        processStreaming(networks, path.slice(1), message.slice(1))
     } else if (path[0] === 'virtualCam') {
-        // U
         processVirtualCam(networks, path.slice(1), message.slice(1))
     } else if (path[0] === 'output') {
-        // U
         processOutput(networks, path.slice(1), message.slice(1))
-    } else if (path[0] === 'misc') {
+    } else if (path[0] === 'media') {
 
-    } else if (path[0] === 'sceneAudio') {
+    } else if (path[0] === 'profile') {
 
-    } else if (path[0] === 'sceneSource') {
+    } else if (path[0] === 'sceneCollection') {
 
     } else if (path[0] === 'misc') {
 
