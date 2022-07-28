@@ -20,6 +20,7 @@ async function processSourceAudio(networks, path, args) {
             getAudioInputList(networks)
         } else {
             getInputVolume(networks, args[0])
+            getInputVolume(networks, args[0], true)
             getInputMute(networks, args[0])
         }
         return

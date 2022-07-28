@@ -11,11 +11,7 @@ async function processStudioMode(networks, path, args) {
             return
         }
 
-        if (args[0] === 1) {
-            setStudioModeEnabled(networks)
-        } else if (args[0] === 0) {
-            disableStudioMode(networks)
-        }
+        setStudioModeEnabled(networks, args[0])
     } else {
         if (path[0] === 'enable') {
             setStudioModeEnabled(networks, args[0])

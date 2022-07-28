@@ -4,13 +4,22 @@ const DEBUG = process.argv.includes('--enable-log')
 
 async function processOutput(networks, path, args) {
     if (path[0] === undefined) {
+        if (args[0] === undefined) {
+            getOutputList(networks)
+            return
+        }
+
         getOutputStatus(networks, args[0])
         return
     }
 
     if (path[1]) {
-        if (path[1] === 'start' && args[0] === 1) {
-            startOutput(networks, path[0])
+        if (path[1] === 'start') {
+            if (args[0] === 1) {
+                startOutput(networks, path[0])
+            } else if (args[0] === 0) {
+                stopOutput(networks, path[0])
+            }
         } else if (path[1] === 'stop' && args[0] === 1) {
             stopOutput(networks, path[0])
         } else if (path[1] === 'toggle' && args[0] === 1) {

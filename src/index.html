@@ -13,7 +13,7 @@
     <img id="image" src="extraResources/icon.png" draggable="false" width="150">
     <div class="config">
         <div class="network-config">
-            <legend class="config-name">OBS Websocket</legend>
+            <legend class="config-name" title="The IP and port of the device OBS is running on, noted that it must have installed obs-websocket 5.0.0 or above">OBS Websocket</legend>
             <label for="obsip">IP</label>
             <input type="text" id="obsip" placeholder="localhost" size="10">
             <label for="obsport">Port</label>
@@ -23,7 +23,7 @@
         </div>
         <hr>
         <div class="network-config">
-            <legend class="config-name">OSC IN</legend>
+            <legend class="config-name" title="The IP and port of the device you want OSC for OBS to listen to">OSC IN</legend>
             <label for="oscinip">IP</label>
             <input type="text" id="oscinip" placeholder="localhost" size="10">
             <label for="oscinport">Port</label>
@@ -31,7 +31,7 @@
         </div>
         <hr>
         <div class="network-config">
-            <legend class="config-name">OSC OUT</legend>
+            <legend class="config-name" title="The IP and port of the device your feedback need to send to, normally it's the same IP of OSC IN with different port">OSC OUT</legend>
             <label for="oscoutip">IP</label>
             <input type="text" id="oscoutip" placeholder="localhost" size="10">
             <label for="oscoutport">Port</label>
@@ -39,77 +39,65 @@
         </div>
         <hr>
         <div class="misc-config">
-            <div class="switch-config" title="Notify OSC client when active scene changes">
+            <div class="switch-config" title="Notify OSC client with /activeScene and /activeSceneCompleted when active scene changes">
                 Notify active scene
                 <div class="switch" id="switch-notifyActiveScene" switch-action="notifyActiveScene" value="0"></div>
             </div>
         </div>
         <div class="misc-config">
-            <div class="switch-config" title="Notify OSC client when active scene changes">
-                Notify active scene inputs
+            <div class="switch-config" title="Notify OSC client with /sceneAudio when active scene changes">
+                Notify active scene audios
                 <div class="switch" id="switch-notifySceneInputs" switch-action="notifySceneInputs" value="0"></div>
             </div>
         </div>
         <div class="misc-config">
-            <div class="switch-config" title="Notify OSC client when active scene changes">
+            <div class="switch-config" title="Notify OSC client with /sceneItem when active scene changes">
                 Notify active scene items
                 <div class="switch" id="switch-notifySceneItems" switch-action="notifySceneItems" value="0"></div>
             </div>
         </div>
         <div class="misc-config">
-            <div class="switch-config" title="Notify OSC client when active scene changes">
-                Notify volume change
+            <div class="switch-config" title="Notify OSC client with /audio/[audio input name]/volume when input volume changes">
+                Notify input volume change
                 <div class="switch" id="switch-notifyVolumeChange" switch-action="notifyVolumeChange" value="0"></div>
             </div>
         </div>
         <div class="misc-config">
-            <div class="switch-config" title="Notify OSC client when active scene changes">
+            <div class="switch-config" title="Notify OSC client with /audio/[audio input name]/mute when input mute state changes">
                 Notify input mute state
                 <div class="switch" id="switch-notifyMuteState" switch-action="notifyMuteState" value="0"></div>
             </div>
         </div>
         <div class="misc-config">
-            <div class="switch-config" title="Notify OSC client when active scene changes">
+            <div class="switch-config" title="Notify OSC client with /virtualCam when virtual cam state changes">
                 Notify virtual cam state
                 <div class="switch" id="switch-notifyVirtualCamState" switch-action="notifyVirtualCamState" value="0"></div>
             </div>
         </div>
         <div class="misc-config">
-            <div class="switch-config" title="Notify OSC client when active scene changes">
+            <div class="switch-config" title="Notify OSC client with /recording when recording state changes">
                 Notify recording state
                 <div class="switch" id="switch-notifyRecordingState" switch-action="notifyRecordingState" value="0"></div>
             </div>
         </div>
         <div class="misc-config">
-            <div class="switch-config" title="Notify OSC client when active scene changes">
+            <div class="switch-config" title="Notify OSC client with /streaming when streaming state changes">
                 Notify streaming state
                 <div class="switch" id="switch-notifyStreamingState" switch-action="notifyStreamingState" value="0"></div>
             </div>
         </div>
         <div class="misc-config">
-            <div class="switch-config" title="Notify OSC client when active scene changes">
+            <div class="switch-config" title="Notify OSC client with /studio when studio mode state changes">
                 Notify studio mode state
                 <div class="switch" id="switch-notifyStudioModeState" switch-action="notifyStudioModeState" value="0"></div>
             </div>
         </div>
         <div class="misc-config">
-            <div class="switch-config" title="Notify OSC client when active scene changes">
+            <div class="switch-config" title="Notify OSC client with /studio/preview when preview scene changes">
                 Notify studio preview scene
                 <div class="switch" id="switch-notifyStudioPreviewScene" switch-action="notifyStudioPreviewScene" value="0"></div>
             </div>
         </div>
-        <!-- <div class="misc-config disabled" id="custom-scene-feedback">
-            <div class="switch-config" title="Notify active scene through custom path">
-                Custom Feedback Path
-                <div class="switch" id="switch-useCustomPath" switch-action="useCustomPath" value="0"></div>
-            </div>
-            <div id="scene-feedback-path" title="Custom OSC path for feedback, fill in before enable it">
-                /
-                <input type="text" id="useCustomPath-prefix" placeholder="cue" size="4">
-                /[SceneName]/
-                <input type="text" id="useCustomPath-suffix" size="4" title="Leave it blank if you don't want it">
-            </div>
-        </div> -->
         <div class="misc-config">
             <div class="switch-config" title="Output additional volume feedback in dB to /audio/[audio input name]/volumeDb">
                 Enable volumeDb feedback

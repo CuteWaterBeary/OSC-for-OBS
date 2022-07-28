@@ -4,54 +4,93 @@
 > This is a forked repository of [jshea2/OSC-for-OBS](github.com/jshea2/OSC-for-OBS) being (heavily) modified to personal preference, which make it *not* compatible with upstream (function, versioning, etc.). 
 > If you found a bug or have any suggestion for this repo, please put it [here](https://github.com/Re-Alise/OSC-for-OBS/issues).
 
+> This software is in **WIP** state, with incompleted functions, inconsistent behaviour and/or critical bugs, please try it throughly in a test environment first if you would like to use it anywhere else
+
 <p align="center">
   <img src="./icons/png/1024x1024.png" width=150 align="center">
 </p>
 
 Control and listen to [OBS](https://obsproject.com/) via OSC protocol
 
+
 # Requirement
 
 - [OBS Studio](https://obsproject.com) 27.0.0 or above
 - [obs-websocket](https://github.com/obsproject/obs-websocket) **5.0.0** or above
 
+# Scene and Source Naming
+
+To prevent unexpected behaviour, it's recommended to avoid the use of following names for your scenes/sources (case sensitive):
+
+- transform
+
+- enable
+
+- disable
+
+While white space, symbols and non-ascii characters works fine so far in my testing, if you encountered any issue, please try renaming them to ascii characters and replace white space with underscore `_` or dash `-`
+
 # OSC Command List (WIP)
+
+Format: `[command address(path)]` `argument 1` `argument 2` ... `argument n`
 
 ## Scene
 
 `/scene`
 
+Get scene list
+
+`/activeScene`
+
+Get currently active scene
+
 `/scene` `[scene name]`
 
 `/scene` `[scene index (0~n-1)]`
 
-`/scene/[scene name]`
+`/scene/[scene name]` `1`
 
-`/scene/[scene index (0~n-1)]`
-
-`/activeScene`
+`/scene/[scene index (0~n-1)]` `1`
 
 `/activeScene` `[scene name]`
+
+Set currently active scene
 
 ## Source
 
 `/source`
 
+Get source list (scenes + inputs)
+
+`/source/[source name]/active` or
+
 `/source` `[source name]`
+
+Get active state (shown on screen or not) of source
 
 ## Scene Item
  
 `/sceneItem`
 
-`/sceneItem/[path to sceen item]/show`
+Get scene item list of current scene
 
-`/sceneItem/[path to sceen item]/show` `[0|1]`
+`/sceneItem` `[scene name]`
 
-`/sceneItem/[path to sceen item]/hide` `1`
+Get scene item list of specific scene
 
-<!-- `/sceneItem/[path to sceen item]/reset` `1` -->
+`/sceneItem/[path to scene item]/enable`
 
-`/sceneItem/[path to sceen item]/transform`
+Get enable state of the scene item
+
+`/sceneItem/[path to scene item]/enable` `[0|1]`
+
+Set enable state of the scene item
+
+`/sceneItem/[path to scene item]/disable` `1`
+
+Disable the scene item
+
+`/sceneItem/[path to scene item]/transform`
 
 Get transform/crop info (attributes) of a scene item
 
@@ -104,9 +143,9 @@ Get transform/crop info (attributes) of a scene item
   - `OBS_BOUNDS_SCALE_TO_HEIGHT` (Scale to height of bounds)
   - `OBS_BOUNDS_MAX_ONLY` (Maximum size only)
 
-`/sceneItem/[path to sceen item]/transform/[transform attribute]`
+`/sceneItem/[path to scene item]/transform/[transform attribute]`
 
-`/sceneItem/[path to sceen item]/transform/[transform attribute]` `[attribute value]`
+`/sceneItem/[path to scene item]/transform/[transform attribute]` `[attribute value]`
 
 ### Note - Resizing a source (scene item)
 
@@ -132,119 +171,338 @@ Or switch bounding box type to `Stretch to bounds` then change the bounding box 
 '/sceneItem/Scene 1/Image/transform/boundsHeight' 1080
 ```
 
+## Input
+
+`/input`
+
+Get input list
+
+`/input/[input name]/settings`
+
+Get list of path of available settings for the input
+
+`/input/[input name]/settings/[path of setting]`
+
+Get current value of the input setting
+
+`/input/[input name]/settings/[path of setting]` `[setting value]`
+
+Set current value of the input setting
+
+`/input/[input name]/default`
+
+Get list of path of default settings for the input
+
+`input/[input name]/default/[path of setting]`
+
+Get default value of the input setting
+
+
 ## Audio
 
 `/audio`
 
-`/audio` `[audio source name]`
+Get audio input list (including special inputs like PC audio and mic)
+
+`/audio` `[audio input name]`
+
+Get current volume of audio input in both mil and dB, output to `/audio/[audio input name]/volume` and `/audio/[audio input name]/volumeDb`
 
 `/audio/volume`
 
-`/audio/volume` `[volume (0.0~1.0)]`
+Get current volume of audio input in *mil*
+
+`/audio/volume` `[audio volume]`
+
+Set current volume of audio input in *mil*
+
+`/audio/volumeDb`
+
+Get current volume of audio input in *dB*
+
+`/audio/volumeDb` `[audio volume]`
+
+Set current volume of audio input in *dB*
 
 `/audio/mute`
 
+Get mute state of audio input
+
 `/audio/mute` `[0|1]`
 
-## Recording
+Set mute state of audio input
 
-`/recording`
+`/sceneAudio`
 
-`/recording` `[0|1]`
+Get audio input list of current scene (including special inputs like PC audio and mic)
 
-`/recording/start` `1`
+## Transition
 
-`/recording/stop` `1`
+`/transition`
 
-`/recording/pause` `0`
+Get transition list
 
-`/recording/pause` `1`
+`/transition/current`
 
-`/recording/resume` `1`
+Get current transition name
 
-`/recording/toggle` `1`
+`/transition/current` `[scene name]`
 
-`/recording/togglePause` `1`
+Set current transition name
+
+`/transition/duration`
+
+Get current transition duration
+
+`/transition/duration` `[duration (ms)]`
+
+Set current transition duration
+
+`/transition/cursor`
+
+Get current progression of transition (0.0~1.0)
 
 ## Studio
 
 `/studio`
 
-`/studio` `[0|1]`
+Get enable state of studio mode
 
-`/studio/enable`
+`/studio` `[0|1]` or
+
+`/studio/enable` `[0|1]`
+
+Set enable state of studio mode
 
 `/studio/disable`
 
+Disable studio mode
+
 `/studio/toggle`
+
+Toggle studio mode
 
 `/studio/preview`
 
+Get studio preview scene
+
 `/studio/preview` `[scene name]`
+
+Set studio preview scene
 
 `/studio/transition` `1`
 
+Trigger studio mode transition
+
 `/studio/transition` `[transition name]`
 
-`/studio/transition` `[transition name] [duration (ms)]`
+Trigger studio mode transition with specific transition
+
+`/studio/transition` `[transition name]` `[duration (ms)]`
+
+Trigger studio mode transition with specific transition and duration
+
+`/studio/cursor` `[cursor value (0.0~1.0)]`
+
+Set current progression of transition (0.0~1.0)
+
+Note: Unless it's set to 1.0, which will also trigger `/activeSceneCompleted`, you could enter any value within the range.
+
+## Recording
+
+`/recording`
+
+Get recording state, 0 for stopped, 1 for started
+
+`/recording` `[0|1]` or
+
+`/recording/start` `[0|1]`
+
+Set recording state, 0 for stop, 1 for start
+
+`/recording/stop` `1`
+
+Stop recording
+
+`/recording/pause` `[0|1]`
+
+Pause recording, 0 for resume, 1 for pause
+
+`/recording/resume` `1`
+
+Resume recording
+
+`/recording/toggle` `1`
+
+Toggle recording state between start and stop
+
+`/recording/togglePause` `1`
+
+Toggle recording state between pause and resume
+
+## Streaming
+
+`/streaming`
+
+Get streaming state, 0 for stopped, 1 for started
+
+`/streaming` `[0|1]` or
+
+`/streaming/start` `[0|1]`
+
+Set streaming state, 0 for stop, 1 for start
+
+`/streaming/stop` `1`
+
+Stop streaming
+
+`/streaming/toggle` `1`
+
+Toggle streaming state between start and stop
 
 ## Virtual Cam
 
 `/virtualCam`
 
-`/virtualCam` `[0|1]`
+Get virtual cam state, 0 for stopped, 1 for started
 
-`/virtualCam/start` `1`
+`/virtualCam` `[0|1]` or
+
+`/virtualCam/start` `[0|1]`
+
+Set virtual cam state, 0 for stop, 1 for start
 
 `/virtualCam/stop` `1`
 
+Stop virtual cam
+
 `/virtualCam/toggle` `1`
+
+Toggle virtual cam state between start and stop
 
 ## Output
 
+> Warning: Untested
+
 `/output`
+
+Get output list (might including virtual cam)
+
+`/output/[output name]` or
 
 `/output` `[output name]`
 
-`/output/[output name]` `[0|1]`
+Get output state, 0 for stopped, 1 for started
 
-`/output/[output name]/start` `1`
+`/output/[output name]` `[0|1]` or
+
+`/output/[output name]/start` `[0|1]`
+
+Set output state, 0 for stop, 1 for start
 
 `/output/[output name]/stop` `1`
 
+Stop output
+
 `/output/[output name]/toggle` `1`
 
+Toggle output state between start and stop
+
 # OSC Feedbacks (WIP)
+
+In addition to some commands above, OSC for OBS could also send feedbacks when certain events is triggered in OBS if related option is enabled.
 
 ## Scene
 
 `/activeScene` `[scene name]`
 
+Option: Notify active scene
+
+Triggered when OBS is start changing scene
+
 `/activeSceneCompleted` `[scene name]`
+
+Option: Notify active scene
+
+Triggered when a new scene is completely transitioned
+
+## Scene Item
+
+`/sceneItem` `[scene item 1]` ... `[scene item n]`
+
+Option: Notify active scene items
+
+Triggered when a new scene is completely transitioned
 
 ## Audio
 
-`/sceneAudio` `[scene name]` `[scene audio source 1]` ... `[scene audio source n]`
+`/sceneAudio` `[scene audio input 1]` ... `[scene audio input n]`
 
-`/audio/[audio source]/volume` `[volume (0.0~1.0)]`
+Option: Notify active scene audios
 
-`/audio/[audio source]/mute` `[0|1]`
+Triggered when a new scene is completely transitioned
+
+`/audio/[audio input]/volume` `[volume (0.0~1.0)]`
+
+Option: Notify input volume change
+
+Triggered when a audio input's volume is changed in OBS
+
+`/audio/[audio input]/volumeDb` `[volume (-100.0~0.0)]`
+
+Option: Enable volumeDb feedback
+
+Triggered when a audio input's volume is changed in OBS
+
+`/audio/[audio input]/mute` `[0|1]`
+
+Option: Notify input mute state
+
+Triggered when a audio input is unmuted/muted in OBS
 
 ## Recording
 
 `/recording` `[0|1]`
 
+Option: Notify recording state
+
+Triggered when recording is stopped/started
+
 `/recording/pause` `[0|1]`
+
+Option: Notify recording state
+
+Triggered when recording is resumed/paused
+
+## Streaming
+
+`/streaming` `[0|1]`
+
+Option: Notify streaming state
+
+Triggered when streaming is stopped/started
+
+## Virtual Cam
+
+`/virtualCam` `[0|1]`
+
+Option: Notify virtual cam state
+
+Triggered when virtual cam is stopped/started
 
 ## Studio
 
 `/studio` `[0|1]`
 
+Option: Notify studio mode state
+
+Triggered when studio mode is disabled/enabled in OBS
+
 `/studio/preview` `[scene name]`
 
-## Virtual Cam
+Option: Notify studio preview scene
 
-`/virtualCam` `[0|1]`
+Triggered when preview scene is changed in OBS
 
 # Acknowledgement
 

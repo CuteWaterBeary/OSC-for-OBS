@@ -15,8 +15,12 @@ async function processVirtualCam(networks, path, args) {
             stopVirtualCam(networks)
         }
     } else {
-        if (path[0] === 'start' && args[0] === 1) {
-            startVirtualCam(networks)
+        if (path[0] === 'start') {
+            if (args[0] === 1) {
+                startVirtualCam(networks)
+            } else if (args[0] === 0) {
+                stopVirtualCam(networks)
+            }
         } else if (path[0] === 'stop' && args[0] === 1) {
             stopVirtualCam(networks)
         } else if (path[0] === 'toggle' && args[0] === 1) {
