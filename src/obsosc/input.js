@@ -1,3 +1,5 @@
+const { parseSettingsPath, mergeSettings } = require('./utils')
+
 module.exports = { processInput, getInputList }
 
 const DEBUG = process.argv.includes('--enable-log')
@@ -73,17 +75,7 @@ async function getInputSettings(networks, inputName, sendOSC = true) {
 
         // Merge two settings since inputSettings do not contains any
         // setting not been modified yet and vise versa.
-        const mergeSettings = (inputSettings, defaultInputSettings) => {
-            for (setting in inputSettings) {
-                if (typeof (inputSettings[setting]) === 'object' && defaultInputSettings[setting]) {
-                    mergeSettings(inputSettings[setting], defaultInputSettings[setting])
-                } else {
-                    defaultInputSettings[setting] = inputSettings[setting]
-                }
-            }
-        }
-
-        mergeSettings(inputSettings, defaultInputSettings)
+        mergeSettings(defaultInputSettings, inputSettings)
         if (sendOSC) {
             try {
                 networks.oscOut.send(inputSettingsPath, parseSettingsPath(defaultInputSettings))
@@ -91,7 +83,7 @@ async function getInputSettings(networks, inputName, sendOSC = true) {
                 if (DEBUG) console.error(`getInputSettings -- Failed to send settings of input ${inputName}:`, e)
             }
         }
-        return defaultInputSettings
+        return inputSettings
     } catch (e) {
         if (DEBUG) console.error(`getInputSettings -- Failed to get settings of input ${inputName}:`, e)
     }
@@ -136,23 +128,6 @@ async function setInputSetting(networks, inputName, settingPath, settingValue) {
     }
     temp[settingPath.at(-1)] = settingValue
     setInputSettings(networks, inputName, inputSettings)
-}
-
-function parseSettingsPath(settings) {
-    const settingsPath = []
-    for (const key in settings) {
-        if (Object.hasOwnProperty.call(settings, key)) {
-            if (typeof (settings[key]) === 'object') {
-                const subKeys = parseSettingsPath(settings[key], key)
-                subKeys.forEach(subKey => {
-                    settingsPath.push(`${key}/${subKey}`)
-                })
-            } else {
-                settingsPath.push(key)
-            }
-        }
-    }
-    return settingsPath
 }
 
 async function getInputDefaultSettings(networks, inputName, sendOSC = true) {

@@ -12,7 +12,6 @@
 
 Control and listen to [OBS](https://obsproject.com/) via OSC protocol
 
-
 # Requirement
 
 - [OBS Studio](https://obsproject.com) 27.0.0 or above
@@ -34,6 +33,10 @@ While white space, symbols and non-ascii characters works fine so far in my test
 
 Format: `[command address(path)]` `argument 1` `argument 2` ... `argument n`
 
+> If a command could be triggered by multiple addresses, only the first (top) one would received the feedback.
+
+> Example: Get active state of scene `Scene 1` by sending `/source` `Scene 1` would still getting feedback from `/source/Scene 1/active`
+
 ## Scene
 
 `/scene`
@@ -44,15 +47,15 @@ Get scene list
 
 Get currently active scene
 
-`/scene` `[scene name]`
+`/activeScene` `[scene name]` or
 
-`/scene` `[scene index (0~n-1)]`
+`/scene` `[scene name]` or
 
-`/scene/[scene name]` `1`
+`/scene` `[scene index (0~n-1)]` or
+
+`/scene/[scene name]` `1` or
 
 `/scene/[scene index (0~n-1)]` `1`
-
-`/activeScene` `[scene name]`
 
 Set currently active scene
 
@@ -62,11 +65,47 @@ Set currently active scene
 
 Get source list (scenes + inputs)
 
-`/source/[source name]/active` or
+`/source` `[source name]` or
 
-`/source` `[source name]`
+`/source/[source name]/active`
 
 Get active state (shown on screen or not) of source
+
+`/source/[source name]/filters`
+
+Get filter list of the source
+
+`/source/[source name]/filters/[filter name]` or
+
+`/source/[source name]/filters/[filter name]/enable`
+
+Get enable state of the filter
+
+`/source/[source name]/filters/[filter name]` `[0|1]` or
+
+`/source/[source name]/filters/[filter name]/enable` `[0|1]`
+
+Set enable state of the filter
+
+`/source/[source name]/filters/[filter name]/disable`
+
+Disable the filter
+
+`/source/[source name]/filters/[filter name]/settings`
+
+Get list of path of available settings for the filter
+
+`/source/[source name]/filters/[filter name]/settings/[path of setting]`
+
+Get current value of the filter setting
+
+`/source/[source name]/filters/[filter name]/settings/[path of setting]` `[setting value]`
+
+Set current value of the filter setting
+
+`/source/[source name]/filters/[filter name]/reset`
+
+Reset filter settings and enable it
 
 ## Scene Item
  
