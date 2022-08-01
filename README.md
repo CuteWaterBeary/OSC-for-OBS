@@ -35,7 +35,7 @@ Format: `[command address(path)]` `argument 1` `argument 2` ... `argument n`
 
 > If a command could be triggered by multiple addresses, only the first (top) one would received the feedback.
 
-> Example: Get active state of scene `Scene 1` by sending `/source` `Scene 1` would still getting feedback from `/source/Scene 1/active`
+> Example: Get active state of scene `Scene 1` by sending `/source` `Scene 1` would still getting feedback from `/source/Scene 1`
 
 ## Scene
 
@@ -64,6 +64,8 @@ Set currently active scene
 `/source`
 
 Get source list (scenes + inputs)
+
+`/source/[source name]` or
 
 `/source` `[source name]` or
 
