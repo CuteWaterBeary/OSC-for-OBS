@@ -14,6 +14,8 @@ const { processStreaming, sendStreamingStateFeedback } = require('./obsosc/strea
 const { processInput } = require('./obsosc/input')
 const { processOutput } = require('./obsosc/output')
 const { processTransition } = require('./obsosc/transition')
+const { processSceneCollection, sendCurrentSceneCollectionFeedback} = require('./obsosc/sceneCollection')
+const { processProfile, sendCurrentProfileFeedback} = require('./obsosc/profile')
 
 module.exports = { connectOBS, disconnectOBS, connectOSC, disconnectOSC, setUpOBSOSC, syncMiscConfig }
 
@@ -242,6 +244,16 @@ async function setUpOBSWebSocketListener() {
         if (!miscConfig.notifyStudioPreviewScene) return
         sendStudioPreviewSceneFeedback(networks, sceneName)
     })
+
+    obs.on('CurrentProfileChanged', ({profileName}) => {
+        if (!miscConfig.notifyCurrentProfile) return
+        sendCurrentProfileFeedback(networks, profileName)
+    })
+    
+    obs.on('CurrentSceneCollectionChanged', ({sceneCollectionName}) => {
+        if (!miscConfig.notifyCurrentSceneCollection) return
+        sendCurrentSceneCollectionFeedback(networks, sceneCollectionName)
+    })
 }
 
 async function processOSCInMessage(message) {
@@ -284,11 +296,11 @@ async function processOSCInMessage(message) {
     } else if (path[0] === 'output') {
         processOutput(networks, path.slice(1), message.slice(1))
     } else if (path[0] === 'media') {
-
+        
     } else if (path[0] === 'profile') {
-
+        processProfile(networks, path.slice(1), message.slice(1))
     } else if (path[0] === 'sceneCollection') {
-
+        processSceneCollection(networks, path.slice(1), message.slice(1))
     } else if (path[0] === 'misc') {
 
     } else {

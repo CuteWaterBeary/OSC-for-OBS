@@ -449,6 +449,38 @@ Stop output
 
 Toggle output state between start and stop
 
+## Profile
+
+`/profile`
+
+Get profile list
+
+`/profile/current`
+
+Get current profile name
+
+`/profile` `[profile name]` or
+
+`/profile/[profile name]` `1`
+
+Set current profile
+
+## Scene Collection
+
+`/sceneCollection`
+
+Get scene collection list
+
+`/sceneCollection/current`
+
+Get current scene collection name
+
+`/sceneCollection` `[scene collection name]` or
+
+`/sceneCollection/[scene collection name]` `1`
+
+Set current scene collection
+
 # OSC Feedbacks (WIP)
 
 In addition to some commands above, OSC for OBS could also send feedbacks when certain events is triggered in OBS if related option is enabled.
@@ -544,6 +576,22 @@ Triggered when studio mode is disabled/enabled in OBS
 Option: Notify studio preview scene
 
 Triggered when preview scene is changed in OBS
+
+## Profile
+
+`/profile/current`
+
+Option: Notify profile
+
+Triggered when current profile is changed
+
+## Scene Collection
+
+`/profile/current`
+
+Option: Notify scene collection
+
+Triggered when current scene collection is changed
 
 # Acknowledgement
 

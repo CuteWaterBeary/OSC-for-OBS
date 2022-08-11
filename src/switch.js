@@ -42,6 +42,12 @@ function setSwitch() {
         notifyStudioPreviewScene: (state, event) => {
             basicSwitch('notifyStudioPreviewScene', state, event)
         },
+        notifyCurrentProfile: (state, event) => {
+            basicSwitch('notifyCurrentProfile', state, event)
+        },
+        notifyCurrentSceneCollection: (state, event) => {
+            basicSwitch('notifyCurrentSceneCollection', state, event)
+        },
         useCustomPath: (state, event) => {
             const prefixInput = document.querySelector('#useCustomPath-prefix')
             const suffixInput = document.querySelector('#useCustomPath-suffix')
