@@ -19,7 +19,9 @@ Control and listen to [OBS](https://obsproject.com/) via OSC protocol
 
 # Scene and Source Naming
 
-To prevent unexpected behaviour, it's recommended to avoid the use of following names for your scenes/sources (case sensitive):
+To prevent unexpected behaviour, it's recommended to avoid the use of following names for your scenes/sources/profiles/scene collections (case sensitive):
+
+- current
 
 - transform
 
@@ -277,6 +279,8 @@ Set mute state of audio input
 
 Get audio input list of current scene (including special inputs like PC audio and mic)
 
+Note: Dynamically added inputs, like ones from source scene of a StreamFX's source mirror, is not included.
+
 ## Transition
 
 `/transition`
@@ -514,6 +518,8 @@ Triggered when a new scene is completely transitioned
 Option: Notify active scene audios
 
 Triggered when a new scene is completely transitioned
+
+Note: Dynamically added inputs, like ones from source scene of a StreamFX's source mirror, is not included.
 
 `/audio/[audio input]/volume` `[volume (0.0~1.0)]`
 

@@ -222,7 +222,7 @@ async function setUpOBSWebSocketListener() {
     })
 
     obs.on('RecordStateChanged', ({ outputState }) => {
-        if (!notifyRecordingState.notifyRecordingState) return
+        if (!miscConfig.notifyRecordingState) return
         if (outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED') {
             sendRecordingStateFeedback(networks, 1)
         } else if (outputState === 'OBS_WEBSOCKET_OUTPUT_PAUSED') {

@@ -12,7 +12,17 @@ async function processScene(networks, path, args) {
         return
     }
 
-    setCurrentProgramScene(networks, path[0])
+    if (path[0] === 'current') {
+        // TODO: Add custom path support or deprecate either this or /activeScene
+        let sceneName = await getCurrentProgramScene(networks, false)
+        try {
+            networks.oscOut.send('/scene/current', sceneName)
+        } catch (e) {
+            if (DEBUG) console.error('processScene -- Failed to sent current scene:', e)
+        }
+    } else {
+        setCurrentProgramScene(networks, path[0])
+    }
 }
 
 async function processActiveScene(networks, path, args) {
@@ -31,7 +41,7 @@ async function getSceneList(networks, sendOSC = true) {
         const { scenes } = await networks.obs.call('GetSceneList')
         if (sendOSC) {
             try {
-                networks.oscOut.send(sceneListPath, scenes)
+                networks.oscOut.send(sceneListPath, scenes.flatMap(scene => scene.sceneName))
             } catch (e) {
                 if (DEBUG) console.error('getSceneList -- Failed to send scene list:', e)
             }
