@@ -1,4 +1,8 @@
-module.exports = { processProfile, sendCurrentProfileFeedback }
+if (process.argv.includes('--unit-test')) {
+    module.exports = { processProfile, getProfileList, getCurrentProfile, setCurrentProfile, sendCurrentProfileFeedback }
+} else {
+    module.exports = { processProfile, sendCurrentProfileFeedback }
+}
 
 const DEBUG = process.argv.includes('--enable-log')
 
@@ -34,14 +38,6 @@ async function getProfileList(networks, sendOSC = true) {
     }
 }
 
-async function setCurrentProfile(networks, profileName) {
-    try {
-        await networks.obs.call('SetCurrentProfile', { profileName })
-    } catch (e) {
-        if (DEBUG) console.error('setCurrentProfile -- Failed to set current profile:', e)
-    }
-}
-
 async function getCurrentProfile(networks) {
     const currentProfilePath = '/profile/current'
     try {
@@ -53,6 +49,14 @@ async function getCurrentProfile(networks) {
         }
     } catch (e) {
         if (DEBUG) console.error('getCurrentProfile -- Failed to get current profile:', e)
+    }
+}
+
+async function setCurrentProfile(networks, profileName) {
+    try {
+        await networks.obs.call('SetCurrentProfile', { profileName })
+    } catch (e) {
+        if (DEBUG) console.error('setCurrentProfile -- Failed to set current profile:', e)
     }
 }
 

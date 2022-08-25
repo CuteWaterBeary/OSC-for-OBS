@@ -1,4 +1,8 @@
-module.exports = { processVirtualCam, sendVirtualCamStateFeedback }
+if (process.argv.includes('--unit-test')) {
+    module.exports = { processVirtualCam, getVirtualCamStatus, startVirtualCam, stopVirtualCam, toggleVirtualCam, sendVirtualCamStateFeedback }
+} else {
+    module.exports = { processVirtualCam, sendVirtualCamStateFeedback }
+}
 
 const DEBUG = process.argv.includes('--enable-log')
 

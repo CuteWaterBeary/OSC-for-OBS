@@ -1,4 +1,8 @@
-module.exports = { processOutput }
+if (process.argv.includes('--unit-test')) {
+    module.exports = { processOutput, getOutputList, getOutputStatus, startOutput, stopOutput, toggleOutput }
+} else {
+    module.exports = { processOutput }
+}
 
 const DEBUG = process.argv.includes('--enable-log')
 
@@ -43,7 +47,7 @@ async function processOutput(networks, path, args) {
 async function getOutputList(networks) {
     const outputListPath = '/output'
     try {
-        const {outputs} = await networks.obs.call('GetOutputList')
+        const { outputs } = await networks.obs.call('GetOutputList')
         const outputList = outputs.flatMap(output => output.outputName)
         networks.oscOut.send(outputListPath, outputList)
     } catch (e) {

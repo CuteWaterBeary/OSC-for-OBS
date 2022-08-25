@@ -1,4 +1,8 @@
-module.exports = { processRecording, sendRecordingStateFeedback, sendRecordingPauseStateFeedback }
+if (process.argv.includes('--unit-test')) {
+    module.exports = { processRecording, getRecordStatus, startRecord, stopRecord, toggleRecord, pauseRecord, resumeRecord, toggleRecordPause, sendRecordingStateFeedback, sendRecordingPauseStateFeedback }
+} else {
+    module.exports = { processRecording, sendRecordingStateFeedback, sendRecordingPauseStateFeedback }
+}
 
 const DEBUG = process.argv.includes('--enable-log')
 

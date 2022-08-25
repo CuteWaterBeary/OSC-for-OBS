@@ -1,4 +1,8 @@
-module.exports = { processSceneCollection, sendCurrentSceneCollectionFeedback }
+if (process.argv.includes('--unit-test')) {
+    module.exports = { processSceneCollection, getSceneCollectionList, getCurrentSceneCollection, setCurrentSceneCollection, sendCurrentSceneCollectionFeedback }
+} else {
+    module.exports = { processSceneCollection, sendCurrentSceneCollectionFeedback }
+}
 
 const DEBUG = process.argv.includes('--enable-log')
 
@@ -34,14 +38,6 @@ async function getSceneCollectionList(networks, sendOSC = true) {
     }
 }
 
-async function setCurrentSceneCollection(networks, sceneCollectionName) {
-    try {
-        await networks.obs.call('SetCurrentSceneCollection', { sceneCollectionName })
-    } catch (e) {
-        if (DEBUG) console.error('setSceneCollectionList -- Failed to set current scene collection:', e)
-    }
-}
-
 async function getCurrentSceneCollection(networks) {
     const currentSceneCollectionPath = '/sceneCollection/current'
     try {
@@ -53,6 +49,14 @@ async function getCurrentSceneCollection(networks) {
         }
     } catch (e) {
         if (DEBUG) console.error('getCurrentSceneCollection -- Failed to get current scene collection:', e)
+    }
+}
+
+async function setCurrentSceneCollection(networks, sceneCollectionName) {
+    try {
+        await networks.obs.call('SetCurrentSceneCollection', { sceneCollectionName })
+    } catch (e) {
+        if (DEBUG) console.error('setSceneCollectionList -- Failed to set current scene collection:', e)
     }
 }
 

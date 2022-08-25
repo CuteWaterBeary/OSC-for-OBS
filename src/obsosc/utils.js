@@ -1,4 +1,8 @@
-module.exports = { mergeSettings, parseSettingsPath }
+if (process.argv.includes('--unit-test')) {
+    module.exports = { mergeSettings, parseSettingsPath }
+} else {
+    module.exports = { mergeSettings, parseSettingsPath }
+}
 
 function mergeSettings(defaultSettings, currentSettings) {
     for (setting in currentSettings) {

@@ -1,6 +1,10 @@
 const { setCurrentSceneTransition, setCurrentSceneTransitionDuration, setTBarPosition } = require('./transition')
 
-module.exports = { processStudioMode, sendStudioModeStateFeedback, sendStudioPreviewSceneFeedback }
+if (process.argv.includes('--unit-test')) {
+    module.exports = { processStudioMode, getStudioModeEnabled, setStudioModeEnabled, toggleStudioMode, getCurrentPreviewScene, setCurrentPreviewScene, transitionToProgram, triggerStudioModeTransition, sendStudioModeStateFeedback, sendStudioPreviewSceneFeedback }
+} else {
+    module.exports = { processStudioMode, sendStudioModeStateFeedback, sendStudioPreviewSceneFeedback }
+}
 
 const DEBUG = process.argv.includes('--enable-log')
 
@@ -96,8 +100,8 @@ async function transitionToProgram(networks, args) {
         triggerStudioModeTransition(networks)
     } else if (typeof (args[0]) === 'string') {
         await setCurrentSceneTransition(networks, args[0])
-        if (typeof(args[1]) === 'number') {
-            await setCurrentSceneTransitionDuration (networks, args[1])
+        if (typeof (args[1]) === 'number') {
+            await setCurrentSceneTransitionDuration(networks, args[1])
         }
         triggerStudioModeTransition(networks)
     } else {

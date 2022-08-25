@@ -1,4 +1,8 @@
-module.exports = { processTransition, setCurrentSceneTransition, setCurrentSceneTransitionDuration, setTBarPosition }
+if (process.argv.includes('--unit-test')) {
+    module.exports = { processTransition, getCurrentSceneTransition, setCurrentSceneTransition, getSceneTransitionList, getCurrentSceneTransitionDuration, setCurrentSceneTransitionDuration, getCurrentSceneTransitionCursor, setTBarPosition }
+} else {
+    module.exports = { processTransition, setCurrentSceneTransition, setCurrentSceneTransitionDuration, setTBarPosition }
+}
 
 const DEBUG = process.argv.includes('--enable-log')
 

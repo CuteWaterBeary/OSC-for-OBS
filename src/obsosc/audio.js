@@ -2,13 +2,16 @@ const { getCurrentProgramScene } = require('./scene')
 const { getSceneItemList } = require('./sceneItem')
 const { getInputList } = require('./input')
 
-module.exports = { updateAudioInputKindList, processSourceAudio, getAudioInputList, getSceneAudioInputList, sendSceneAudioInputFeedback, sendAudioInputVolumeFeedback, sendAudioMuteFeedback }
+if (process.argv.includes('--unit-test')) {
+    module.exports = { processSourceAudio, getAudioInputList, updateAudioInputKindList, getInputVolume, setInputVolume, getInputMute, setInputMute, getSpecialInputs, getSceneAudioInputList, sendSceneAudioInputFeedback, sendAudioInputVolumeFeedback, sendAudioMuteFeedback }
+} else {
+    module.exports = { updateAudioInputKindList, processSourceAudio, getAudioInputList, getSceneAudioInputList, sendSceneAudioInputFeedback, sendAudioInputVolumeFeedback, sendAudioMuteFeedback }
+}
 
 const DEBUG = process.argv.includes('--enable-log')
 
 let audioInputKindList = new Set()
 let otherInputKindList = new Set()
-
 
 // TODO: Change updateAudioInputKindList when OBSWebSocket provide more suitable API
 // TODO: Remove audio capability checking via GetInputVolume in getAudioInputList and
@@ -204,7 +207,7 @@ async function getSceneAudioInputList(networks, sceneName) {
 }
 
 async function sendSceneAudioInputFeedback(networks, sceneName) {
-    getSceneAudioInputList(networks, sceneName)
+    await getSceneAudioInputList(networks, sceneName)
 }
 
 function sendAudioInputVolumeFeedback(networks, inputName, inputVolumeMul, inputVolumeDb) {

@@ -1,4 +1,8 @@
-module.exports = { processStreaming, sendStreamingStateFeedback }
+if (process.argv.includes('--unit-test')) {
+    module.exports = { processStreaming, getStreamStatus, startStream, stopStream, toggleStream, sendStreamingStateFeedback }
+} else {
+    module.exports = { processStreaming, sendStreamingStateFeedback }
+}
 
 const DEBUG = process.argv.includes('--enable-log')
 
@@ -26,15 +30,6 @@ async function processStreaming(networks, path, args) {
         } else if (path[0] === 'toggle' && args[0] === 1) {
             toggleStream(networks)
         }
-    }
-}
-
-function sendStreamingStateFeedback(networks, state) {
-    const streamingPath = `/streaming`
-    try {
-        networks.oscOut.send(streamingPath, state)
-    } catch (e) {
-        if (DEBUG) console.error(`sendStreamingStateFeedback -- Failed to send streaming state feedback:`, e)
     }
 }
 
@@ -73,5 +68,14 @@ async function toggleStream(networks) {
         await networks.obs.call('ToggleStream')
     } catch (e) {
         if (DEBUG) console.error('toggleStream -- Failed to toggle streaming:', e)
+    }
+}
+
+function sendStreamingStateFeedback(networks, state) {
+    const streamingPath = `/streaming`
+    try {
+        networks.oscOut.send(streamingPath, state)
+    } catch (e) {
+        if (DEBUG) console.error(`sendStreamingStateFeedback -- Failed to send streaming state feedback:`, e)
     }
 }
