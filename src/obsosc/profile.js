@@ -34,20 +34,26 @@ async function getProfileList(networks, sendOSC = true) {
                 if (DEBUG) console.error('getProfileList -- Failed to send profile list', e)
             }
         }
+
+        return profiles
     } catch (e) {
         if (DEBUG) console.error('getProfileList -- Failed to get profile list:', e)
     }
 }
 
-async function getCurrentProfile(networks) {
+async function getCurrentProfile(networks, sendOSC = true) {
     const currentProfilePath = '/profile/current'
     try {
-        const { profileName } = await networks.obs.call('GetProfileList')
-        try {
-            networks.oscOut.send(currentProfilePath, profileName)
-        } catch (e) {
-            if (DEBUG) console.error('getCurrentProfile -- Failed to send current profile:', e)
+        const { currentProfileName } = await networks.obs.call('GetProfileList')
+        if (sendOSC) {
+            try {
+                networks.oscOut.send(currentProfilePath, currentProfileName)
+            } catch (e) {
+                if (DEBUG) console.error('getCurrentProfile -- Failed to send current profile:', e)
+            }
         }
+
+        return currentProfileName
     } catch (e) {
         if (DEBUG) console.error('getCurrentProfile -- Failed to get current profile:', e)
     }

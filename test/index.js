@@ -4,12 +4,12 @@ const should = require('chai').should()
 const { open } = require('fs/promises')
 const OBSWebSocket = require('obs-websocket-js').default
 
-const audio = require('../src/obsosc/audio')
-const input = require('../src/obsosc/input')
-
+const _audio = require('../src/obsosc/audio')
+const _input = require('../src/obsosc/input')
 const _output = require('../src/obsosc/output')
+const _profile = require('../src/obsosc/profile')
 
-const scene = require('../src/obsosc/scene')
+const _scene = require('../src/obsosc/scene')
 const { parseSettingsPath, mergeSettings } = require('../src/obsosc/utils')
 
 const delay = function (time) {
@@ -102,7 +102,7 @@ describe('OBSOSC modules', function () {
     describe('Audio', function () {
         describe('getAudioInputList', function () {
             it('should get a list of input name', async function () {
-                const audioInputList = await audio.getAudioInputList(networks)
+                const audioInputList = await _audio.getAudioInputList(networks)
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
                 output.address.should.be.equal('/audio', 'Wrong OSC address')
@@ -115,13 +115,13 @@ describe('OBSOSC modules', function () {
 
         describe('updateAudioInputKindList', function () {
             it('should updata audio input kind list (would not check)', async function () {
-                await audio.updateAudioInputKindList(networks)
+                await _audio.updateAudioInputKindList(networks)
             })
         })
 
         describe('getInputVolume', function () {
             it('should get volume of an input in mul', async function () {
-                const { inputVolumeMul } = await audio.getInputVolume(networks, 'Audio Input Capture')
+                const { inputVolumeMul } = await _audio.getInputVolume(networks, 'Audio Input Capture')
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
                 output.address.should.be.equal('/audio/Audio Input Capture/volume', 'Wrong OSC address')
@@ -131,7 +131,7 @@ describe('OBSOSC modules', function () {
             })
 
             it('should get volume of an input in dB', async function () {
-                const { inputVolumeDb } = await audio.getInputVolume(networks, 'Audio Input Capture', true)
+                const { inputVolumeDb } = await _audio.getInputVolume(networks, 'Audio Input Capture', true)
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
                 output.address.should.be.equal('/audio/Audio Input Capture/volumeDb', 'Wrong OSC address')
@@ -143,15 +143,15 @@ describe('OBSOSC modules', function () {
 
         describe('setInputVolume', function () {
             it('should able to set input volume in mul', async function () {
-                await audio.setInputVolume(networks, 'Audio Input Capture', 0)
-                const { inputVolumeMul, inputVolumeDb } = await audio.getInputVolume(networks, 'Audio Input Capture')
+                await _audio.setInputVolume(networks, 'Audio Input Capture', 0)
+                const { inputVolumeMul, inputVolumeDb } = await _audio.getInputVolume(networks, 'Audio Input Capture')
                 inputVolumeMul.should.be.equal(0)
                 inputVolumeDb.should.be.equal(-100)
             })
 
             it('should able to set input volume in dB', async function () {
-                await audio.setInputVolume(networks, 'Audio Input Capture', 0, true)
-                const { inputVolumeMul, inputVolumeDb } = await audio.getInputVolume(networks, 'Audio Input Capture')
+                await _audio.setInputVolume(networks, 'Audio Input Capture', 0, true)
+                const { inputVolumeMul, inputVolumeDb } = await _audio.getInputVolume(networks, 'Audio Input Capture')
                 inputVolumeMul.should.be.equal(1)
                 inputVolumeDb.should.be.equal(0)
             })
@@ -159,7 +159,7 @@ describe('OBSOSC modules', function () {
 
         describe('getInputMute', function () {
             it('should get mute state of a inupt', async function () {
-                const mute = await audio.getInputMute(networks, 'Audio Input Capture')
+                const mute = await _audio.getInputMute(networks, 'Audio Input Capture')
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
                 output.address.should.be.equal('/audio/Audio Input Capture/mute', 'Wrong OSC address')
@@ -170,21 +170,21 @@ describe('OBSOSC modules', function () {
 
         describe('setInputMute', function () {
             it('should be able to mute an input', async function () {
-                await audio.setInputMute(networks, 'Audio Input Capture', 1)
-                const mute = await audio.getInputMute(networks, 'Audio Input Capture')
+                await _audio.setInputMute(networks, 'Audio Input Capture', 1)
+                const mute = await _audio.getInputMute(networks, 'Audio Input Capture')
                 mute.should.be.true
             })
 
             it('should be able to unmute an input', async function () {
-                await audio.setInputMute(networks, 'Audio Input Capture', 0)
-                const mute = await audio.getInputMute(networks, 'Audio Input Capture')
+                await _audio.setInputMute(networks, 'Audio Input Capture', 0)
+                const mute = await _audio.getInputMute(networks, 'Audio Input Capture')
                 mute.should.be.false
             })
         })
 
         describe('getSpecialInputs', function () {
             it('should get special inputs', async () => {
-                const specialInputList = await audio.getSpecialInputs(networks)
+                const specialInputList = await _audio.getSpecialInputs(networks)
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
                 output.address.should.be.equal('/specialAudio', 'Wrong OSC address')
@@ -195,7 +195,7 @@ describe('OBSOSC modules', function () {
 
         describe('getSceneAudioInputList', function () {
             it('should get all audio inputs in a scene', async () => {
-                const sceneAudioInputs = await audio.getSceneAudioInputList(networks, 'Test Scene 3')
+                const sceneAudioInputs = await _audio.getSceneAudioInputList(networks, 'Test Scene 3')
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
                 output.address.should.be.equal('/sceneAudio', 'Wrong OSC address')
@@ -205,14 +205,14 @@ describe('OBSOSC modules', function () {
             })
 
             it('should get all audio inputs in current scene', async () => {
-                const currentSceneAudioInputs = await audio.getSceneAudioInputList(networks)
+                const currentSceneAudioInputs = await _audio.getSceneAudioInputList(networks)
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
                 output.address.should.be.equal('/sceneAudio', 'Wrong OSC address')
                 output.data.should.be.an('Array', 'Wrong OSC output format')
                 currentSceneAudioInputs.should.be.an('Array')
 
-                const sceneAudioInputs = await audio.getSceneAudioInputList(networks, 'Test Scene 3')
+                const sceneAudioInputs = await _audio.getSceneAudioInputList(networks, 'Test Scene 3')
                 sceneAudioInputs.should.be.an('Array')
                 currentSceneAudioInputs.should.have.lengthOf(sceneAudioInputs.length - 2) // Excluding Audio Input Capture and Browser
             })
@@ -220,7 +220,7 @@ describe('OBSOSC modules', function () {
 
         describe('sendSceneAudioInputFeedback', function () {
             it('should send scene audio input list through OSC', async function () {
-                await audio.sendSceneAudioInputFeedback(networks, 'Test Scene 3')
+                await _audio.sendSceneAudioInputFeedback(networks, 'Test Scene 3')
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
                 output.address.should.be.equal('/sceneAudio', 'Wrong OSC address')
@@ -232,7 +232,7 @@ describe('OBSOSC modules', function () {
         describe('sendAudioInputVolumeFeedback', function () {
             it('should send an input\'s volume in mul through OSC', async function () {
                 networks.miscConfig.enableVolumeDbOutput = false
-                await audio.sendAudioInputVolumeFeedback(networks, 'Audio Input Capture', 0, -100)
+                await _audio.sendAudioInputVolumeFeedback(networks, 'Audio Input Capture', 0, -100)
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
                 output.address.should.be.equal('/audio/Audio Input Capture/volume', 'Wrong OSC address')
@@ -241,7 +241,7 @@ describe('OBSOSC modules', function () {
 
             it('should send an input\'s volume in both mul and dB through OSC', async function () {
                 networks.miscConfig.enableVolumeDbOutput = true
-                await audio.sendAudioInputVolumeFeedback(networks, 'Audio Input Capture', 0, -100)
+                await _audio.sendAudioInputVolumeFeedback(networks, 'Audio Input Capture', 0, -100)
                 networks.oscOut.outputs.should.have.lengthOf(2, `Too ${networks.oscOut.outputs.length < 2 ? 'little' : 'many'} OSC output`)
 
                 networks.oscOut.outputs[0].address.should.be.equal('/audio/Audio Input Capture/volume', 'Wrong OSC address')
@@ -253,7 +253,7 @@ describe('OBSOSC modules', function () {
 
         describe('sendAudioMuteFeedback', function () {
             it('should send an input\'s mute state through OSC', async function () {
-                await audio.sendAudioMuteFeedback(networks, 'Audio Input Capture', true)
+                await _audio.sendAudioMuteFeedback(networks, 'Audio Input Capture', true)
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
                 output.address.should.be.equal('/audio/Audio Input Capture/mute', 'Wrong OSC address')
@@ -265,7 +265,7 @@ describe('OBSOSC modules', function () {
     describe('Input', function () {
         describe('getInputList', function () {
             it('should get a list of inputs', async function () {
-                const inputs = await input.getInputList(networks)
+                const inputs = await _input.getInputList(networks)
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
                 output.address.should.be.equal('/input', 'Wrong OSC address')
@@ -278,7 +278,7 @@ describe('OBSOSC modules', function () {
 
         describe('getInputKind', function () {
             it('should get a list of input kinds', async function () {
-                const inputKind = await input.getInputKind(networks, 'Color Source')
+                const inputKind = await _input.getInputKind(networks, 'Color Source')
                 inputKind.should.be.a('string')
                 inputKind.should.be.equal('color_source_v3')
             })
@@ -286,7 +286,7 @@ describe('OBSOSC modules', function () {
 
         describe('getInputSettings', function () {
             it('should get the current settings of an input and send setting paths through OSC', async function () {
-                const inputSettings = await input.getInputSettings(networks, 'Scene Label 1')
+                const inputSettings = await _input.getInputSettings(networks, 'Scene Label 1')
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
                 output.address.should.be.equal('/input/Scene Label 1/settings', 'Wrong OSC address')
@@ -299,12 +299,12 @@ describe('OBSOSC modules', function () {
         describe('setInputSettings', function () {
             it('should be able to set the current settings of an input', async function () {
                 let inputSettings = { font: { size: 128 } }
-                await input.setInputSettings(networks, 'Scene Label 1', inputSettings)
-                let currentInputSettings = await input.getInputSettings(networks, 'Scene Label 1')
+                await _input.setInputSettings(networks, 'Scene Label 1', inputSettings)
+                let currentInputSettings = await _input.getInputSettings(networks, 'Scene Label 1')
                 currentInputSettings.font.size.should.be.equal(128)
                 inputSettings.font.size = 96
-                await input.setInputSettings(networks, 'Scene Label 1', inputSettings)
-                currentInputSettings = await input.getInputSettings(networks, 'Scene Label 1')
+                await _input.setInputSettings(networks, 'Scene Label 1', inputSettings)
+                currentInputSettings = await _input.getInputSettings(networks, 'Scene Label 1')
                 currentInputSettings.font.size.should.be.equal(96)
             })
         })
@@ -312,7 +312,7 @@ describe('OBSOSC modules', function () {
 
         describe('getInputSetting', function () {
             it('should get value of an input\'s setting', async function () {
-                await input.getInputSetting(networks, 'Scene Label 1', 'font/size'.split('/'))
+                await _input.getInputSetting(networks, 'Scene Label 1', 'font/size'.split('/'))
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
                 output.address.should.be.equal('/input/Scene Label 1/settings/font/size', 'Wrong OSC address')
@@ -322,13 +322,13 @@ describe('OBSOSC modules', function () {
 
         describe('setInputSetting', function () {
             it('should be able to set value of an input\'s setting', async function () {
-                await input.setInputSetting(networks, 'Color Source', 'height'.split('/'), 512)
-                let currentInputSettings = await input.getInputSettings(networks, 'Color Source', false)
+                await _input.setInputSetting(networks, 'Color Source', 'height'.split('/'), 512)
+                let currentInputSettings = await _input.getInputSettings(networks, 'Color Source', false)
                 currentInputSettings.width.should.be.equal(256)
                 currentInputSettings.height.should.be.equal(512)
                 currentInputSettings.color.should.be.equal(4279676924)
-                await input.setInputSetting(networks, 'Color Source', 'height'.split('/'), 256)
-                currentInputSettings = await input.getInputSettings(networks, 'Color Source', false)
+                await _input.setInputSetting(networks, 'Color Source', 'height'.split('/'), 256)
+                currentInputSettings = await _input.getInputSettings(networks, 'Color Source', false)
                 currentInputSettings.width.should.be.equal(256)
                 currentInputSettings.height.should.be.equal(256)
                 currentInputSettings.color.should.be.equal(4279676924)
@@ -337,7 +337,7 @@ describe('OBSOSC modules', function () {
 
         describe('getInputDefaultSettings', function () {
             it('should get default settings of an input', async function () {
-                const defaultInputSettings = await input.getInputDefaultSettings(networks, 'Color Source')
+                const defaultInputSettings = await _input.getInputDefaultSettings(networks, 'Color Source')
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
                 output.address.should.be.equal('/input/Color Source/default', 'Wrong OSC address')
@@ -348,7 +348,7 @@ describe('OBSOSC modules', function () {
 
         describe('getInputDefaultSetting', function () {
             it('should get default value of an input\'s setting', async function () {
-                await input.getInputDefaultSetting(networks, 'Scene Label 1', 'valign'.split('/'))
+                await _input.getInputDefaultSetting(networks, 'Scene Label 1', 'valign'.split('/'))
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
                 output.address.should.be.equal('/input/Scene Label 1/default/valign', 'Wrong OSC address')
@@ -358,7 +358,7 @@ describe('OBSOSC modules', function () {
 
         describe('getInputPropertiesListPropertyItems', function () {
             it('should get a list of available property value of an input', async function () {
-                const propertyItems = await input.getInputPropertiesListPropertyItems(networks, 'Scene Label 1', 'transform')
+                const propertyItems = await _input.getInputPropertiesListPropertyItems(networks, 'Scene Label 1', 'transform')
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
                 output.address.should.be.equal('input/Scene Label 1/settings/transform/propertyItems', 'Wrong OSC address')
@@ -370,7 +370,7 @@ describe('OBSOSC modules', function () {
 
         describe('pressInputPropertiesButton', function () {
             it('should be able to press property button of an input', async function () {
-                await input.pressInputPropertiesButton(networks, 'Browser', 'refreshnocache')
+                await _input.pressInputPropertiesButton(networks, 'Browser', 'refreshnocache')
             })
         })
 
@@ -426,10 +426,53 @@ describe('OBSOSC modules', function () {
         })
     })
 
+    describe('Profile', function () {
+        describe('getOutputList', function () {
+            it('should get a list of profile', async function () {
+                const profiles = await _profile.getProfileList(networks)
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('/profile', 'Wrong OSC address')
+                output.data.should.be.an('Array', 'Wrong OSC output format')
+                output.data[0].should.be.a('string', 'Wrong OSC output type')
+                profiles.should.be.an('Array')
+                profiles[0].should.be.a('string')
+            })
+        })
+        
+        describe('getCurrentProfile', function () {
+            it('should get current profile', async function () {
+                const currentProfileName = await _profile.getCurrentProfile(networks)
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('/profile/current', 'Wrong OSC address')
+                output.data.should.be.a('string', 'Wrong OSC output format').and.equal(currentProfileName)
+            })
+        })
+
+        describe('setCurrentProfile', function () {
+            it('should be able to set current profile', async function () {
+                const currentProfileName = await _profile.getCurrentProfile(networks)
+                await _profile.setCurrentProfile(networks, currentProfileName)
+            })
+        })
+
+        describe('sendCurrentProfileFeedback', function () {
+            it('should send current profile through OSC', async function () {
+                const profileName = 'Test Profile'
+                await _profile.sendCurrentProfileFeedback(networks, profileName)
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('/profile/current', 'Wrong OSC address')
+                output.data.should.be.equal(profileName, 'Wrong OSC output data')
+            })
+        })
+    })
+
     describe('Scene', function () {
         describe('getSceneList', function () {
             it('should get a list of scene name', async function () {
-                const sceneList = await scene.getSceneList(networks)
+                const sceneList = await _scene.getSceneList(networks)
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
                 output.address.should.be.equal('/scene', 'Wrong OSC address')
@@ -447,7 +490,7 @@ describe('OBSOSC modules', function () {
 
         describe('getCurrentProgramScene', function () {
             it('should get the active scene name', async function () {
-                const sceneList = await scene.getCurrentProgramScene(networks)
+                const sceneList = await _scene.getCurrentProgramScene(networks)
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
                 output.address.should.be.equal('/activeScene', 'Wrong OSC address')
@@ -459,18 +502,18 @@ describe('OBSOSC modules', function () {
         describe('setCurrentProgramScene', function () {
             it('should be able to set active scene by name', async function () {
                 const sceneName = 'Test Scene 1'
-                await scene.setCurrentProgramScene(networks, sceneName)
+                await _scene.setCurrentProgramScene(networks, sceneName)
             })
 
             it('should be able to set active scene by index', async function () {
                 const sceneIndex = 0
-                await scene.setCurrentProgramScene(networks, sceneIndex)
+                await _scene.setCurrentProgramScene(networks, sceneIndex)
             })
         })
 
         describe('sendActiveSceneFeedback', function () {
             it('should send active scene name through OSC', async function () {
-                await scene.sendActiveSceneFeedback(networks)
+                await _scene.sendActiveSceneFeedback(networks)
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
                 output.address.should.be.equal('/activeScene', 'Wrong OSC address')
@@ -480,7 +523,7 @@ describe('OBSOSC modules', function () {
 
         describe('sendSceneCompletedFeedback', function () {
             it('should send completed active scene name through OSC', async function () {
-                await scene.sendSceneCompletedFeedback(networks, 'Test Scene 1')
+                await _scene.sendSceneCompletedFeedback(networks, 'Test Scene 1')
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
                 output.address.should.be.equal('/activeSceneCompleted', 'Wrong OSC address')
