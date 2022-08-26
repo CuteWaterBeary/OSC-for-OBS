@@ -147,18 +147,22 @@ async function getSceneItemTransformValue(networks, path, transform, sendOSC = t
     return sceneItemTransform[transform]
 }
 
-async function getSceneItemEnabled(networks, path) {
+async function getSceneItemEnabled(networks, path, sendOSC = true) {
     let sceneItemEnablePath = `/sceneItem/${path.join('/')}/enable`
     const { sceneName, sceneItemId } = await getSceneAndSceneItemId(networks, path)
     if (sceneItemId === undefined) return
 
     try {
         const { sceneItemEnabled } = await networks.obs.call('GetSceneItemEnabled', { sceneName, sceneItemId })
-        try {
-            networks.oscOut.send(sceneItemEnablePath, sceneItemEnabled)
-        } catch (e) {
-            if (DEBUG) console.error('getSceneItemEnabled -- Failed to send scene item enable state:', e)
+        if (sendOSC) {
+            try {
+                networks.oscOut.send(sceneItemEnablePath, sceneItemEnabled ? 1 : 0)
+            } catch (e) {
+                if (DEBUG) console.error('getSceneItemEnabled -- Failed to send scene item enable state:', e)
+            }
         }
+
+        return sceneItemEnabled
     } catch (e) {
         if (DEBUG) console.error('getSceneItemEnabled -- Failed to get scene item enable state:', e)
     }
@@ -167,7 +171,6 @@ async function getSceneItemEnabled(networks, path) {
 async function setSceneItemEnabled(networks, path, state) {
     const { sceneName, sceneItemId } = await getSceneAndSceneItemId(networks, path)
     if (sceneItemId === undefined) return
-
     try {
         await networks.obs.call('SetSceneItemEnabled', { sceneName, sceneItemId, sceneItemEnabled: (state === 1) ? true : false })
     } catch (e) {

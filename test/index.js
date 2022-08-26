@@ -11,6 +11,7 @@ const _profile = require('../src/obsosc/profile')
 const _recording = require('../src/obsosc/recording')
 const _scene = require('../src/obsosc/scene')
 const _sceneCollection = require('../src/obsosc/sceneCollection')
+const _sceneItem = require('../src/obsosc/sceneItem')
 
 const { parseSettingsPath, mergeSettings } = require('../src/obsosc/utils')
 
@@ -448,7 +449,7 @@ describe('OBSOSC modules', function () {
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
                 output.address.should.be.equal('/profile/current', 'Wrong OSC address')
-                output.data.should.be.a('string', 'Wrong OSC output format').and.equal(currentProfileName)
+                output.data.should.be.a('string', 'Wrong OSC output format').that.equal(currentProfileName)
             })
         })
 
@@ -607,13 +608,13 @@ describe('OBSOSC modules', function () {
     })
 
     describe('Scene Collection', function () {
-        describe('getSceneList', function () {
+        describe('getSceneCollectionList', function () {
             it('should get a list of scene collection names', async function () {
                 const sceneCollections = await _sceneCollection.getSceneCollectionList(networks)
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
                 output.address.should.be.equal('/sceneCollection', 'Wrong OSC address')
-                output.data.should.be.an('Array', 'Wrong OSC output format').and.equal(sceneCollections, 'Wrong OSC output data')
+                output.data.should.be.an('Array', 'Wrong OSC output format').that.deep.equal(sceneCollections, 'Wrong OSC output data')
                 sceneCollections.should.be.include('Test', 'Wrong scene collection name (should be named Test)')
             })
         })
@@ -645,15 +646,247 @@ describe('OBSOSC modules', function () {
                 output.data.should.be.equal(sceneCollectionName, 'Wrong OSC output data')
             })
         })
+    })
 
-        describe('getSceneList', function () {
-            it('should get a list of scene name', async function () {
-                const sceneCollections = await _sceneCollection.getSceneCollectionList(networks)
+    describe('Scene Item', function () {
+        describe('getSceneItemList', function () {
+            it('should get a list of scene item names (that are not in a group)', async function () {
+                const expectedSceneItems = [
+                    'Scene Label 2',
+                    '`!@#$%^&*()_+[]{}',
+                    'テスト　テキスト',
+                    '測試文字'
+                ]
+                const expectedKeys = [
+                    'inputKind',
+                    'isGroup',
+                    'sceneItemBlendMode',
+                    'sceneItemEnabled',
+                    'sceneItemId',
+                    'sceneItemIndex',
+                    'sceneItemLocked',
+                    'sceneItemTransform',
+                    'sourceName',
+                    'sourceType'
+                ]
+                
+                const sceneItems = await _sceneItem.getSceneItemList(networks, 'Test Scene 2')
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
-                output.address.should.be.equal('/sceneCollection', 'Wrong OSC address')
-                output.data.should.be.an('Array', 'Wrong OSC output format').and.equal(sceneCollections, 'Wrong OSC output data')
-                sceneCollections.should.be.include('Test', 'Wrong scene collection name (should be named Test)')
+                output.address.should.be.equal('/sceneItem', 'Wrong OSC address')
+                output.data.should.be.deep.equal(expectedSceneItems, 'Wrong OSC output data')
+                sceneItems.should.be.an('Array')
+                sceneItems[0].should.be.an('object').that.has.all.keys(expectedKeys)
+            })
+
+            it('should get a list of current scene item names (that are not in a group)', async function () {
+                const expectedSceneItems = [
+                    'Scene Label 1',
+                    'Readme'
+                ]
+                const expectedKeys = [
+                    'inputKind',
+                    'isGroup',
+                    'sceneItemBlendMode',
+                    'sceneItemEnabled',
+                    'sceneItemId',
+                    'sceneItemIndex',
+                    'sceneItemLocked',
+                    'sceneItemTransform',
+                    'sourceName',
+                    'sourceType'
+                ]
+                
+                const sceneItems = await _sceneItem.getSceneItemList(networks)
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('/sceneItem', 'Wrong OSC address')
+                output.data.should.be.deep.equal(expectedSceneItems, 'Wrong OSC output data')
+                sceneItems.should.be.an('Array')
+                sceneItems[0].should.be.an('object').that.has.all.keys(expectedKeys)
+            })
+        })
+
+        describe('getSceneAndSceneItemId', function () {
+            it('should get id of a scene item in specified scene', async function () {
+                const { sceneName, sceneItemId } = await _sceneItem.getSceneAndSceneItemId(networks, 'Test Scene 2/`!@#$%^&*()_+[]{}'.split('/'))
+                sceneName.should.be.equal('Test Scene 2')
+                sceneItemId.should.be.equal(10)
+            })
+
+            it('should get id of a scene item in current scene', async function () {
+                const { sceneName, sceneItemId } = await _sceneItem.getSceneAndSceneItemId(networks, 'Readme'.split('/'))
+                sceneName.should.be.equal('Test Scene 1')
+                sceneItemId.should.be.equal(3)
+            })
+        })
+
+        describe('getSceneItemTransform', function () {
+            it('should get transform info of a scene item in specified scene', async function () {
+                const path = 'Test Scene 3/Browser'
+                const expectedKeys = [
+                    'alignment',
+                    'boundsAlignment',
+                    'boundsHeight',
+                    'boundsType',
+                    'boundsWidth',
+                    'cropBottom',
+                    'cropLeft',
+                    'cropRight',
+                    'cropTop',
+                    'height',
+                    'positionX',
+                    'positionY',
+                    'rotation',
+                    'scaleX',
+                    'scaleY',
+                    'sourceHeight',
+                    'sourceWidth',
+                    'width'
+                ]
+
+                const sceneItemTransform = await _sceneItem.getSceneItemTransform(networks, path.split('/'))
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal(`/sceneItem/${path}/transform`, 'Wrong OSC address')
+                output.data.should.be.an('Array', 'Wrong OSC output format').that.deep.equal(Object.keys(sceneItemTransform), 'Wrong OSC output data')
+                sceneItemTransform.should.be.an('object').that.has.all.keys(expectedKeys)
+            })
+            
+            it('should get transform info of a scene item in current scene', async function () {
+                const path = 'Readme'
+                const expectedKeys = [
+                    'alignment',
+                    'boundsAlignment',
+                    'boundsHeight',
+                    'boundsType',
+                    'boundsWidth',
+                    'cropBottom',
+                    'cropLeft',
+                    'cropRight',
+                    'cropTop',
+                    'height',
+                    'positionX',
+                    'positionY',
+                    'rotation',
+                    'scaleX',
+                    'scaleY',
+                    'sourceHeight',
+                    'sourceWidth',
+                    'width'
+                ]
+
+                const sceneItemTransform = await _sceneItem.getSceneItemTransform(networks, path.split('/'))
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal(`/sceneItem/${path}/transform`, 'Wrong OSC address')
+                output.data.should.be.an('Array', 'Wrong OSC output format').that.deep.equal(Object.keys(sceneItemTransform), 'Wrong OSC output data')
+                sceneItemTransform.should.be.an('object').that.has.all.keys(expectedKeys)
+            })
+        })
+
+        describe('setSceneItemTransform', function () {
+            it('should be able to set transform info of a scene item in specified scene', async function () {
+                const path = 'Test Scene 3/Browser'
+                await _sceneItem.setSceneItemTransform(networks, path.split('/'), 'cropTop', 100)
+                let sceneItemTransform = await _sceneItem.getSceneItemTransform(networks, path.split('/'))
+                sceneItemTransform.cropTop.should.be.equal(100)
+                await _sceneItem.setSceneItemTransform(networks, path.split('/'), 'cropTop', 0)
+                sceneItemTransform = await _sceneItem.getSceneItemTransform(networks, path.split('/'))
+                sceneItemTransform.cropTop.should.be.equal(0)
+            })
+
+            it('should be able to set transform info of a scene item in current scene', async function () {
+                const path = 'Readme'
+                await _sceneItem.setSceneItemTransform(networks, path.split('/'), 'cropTop', 100)
+                let sceneItemTransform = await _sceneItem.getSceneItemTransform(networks, path.split('/'))
+                sceneItemTransform.cropTop.should.be.equal(100)
+                await _sceneItem.setSceneItemTransform(networks, path.split('/'), 'cropTop', 0)
+                sceneItemTransform = await _sceneItem.getSceneItemTransform(networks, path.split('/'))
+                sceneItemTransform.cropTop.should.be.equal(0)
+            })
+        })
+
+        describe('getSceneItemTransformValue', function () {
+            it('should get transform value of a scene item in specified scene', async function () {
+                const path = 'Test Scene 3/Browser'
+                const transfromValue = await _sceneItem.getSceneItemTransformValue(networks, path.split('/'), 'positionY')                
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal(`/sceneItem/${path}/transform/positionY`, 'Wrong OSC address')
+                output.data.should.be.equal(480, 'Wrong OSC output data')
+                transfromValue.should.be.equal(output.data)
+            })
+
+            it('should get transform value of a scene item in current scene', async function () {
+                const path = 'Readme'
+                const transfromValue = await _sceneItem.getSceneItemTransformValue(networks, path.split('/'), 'sourceHeight')
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal(`/sceneItem/${path}/transform/sourceHeight`, 'Wrong OSC address')
+                output.data.should.be.equal(824, 'Wrong OSC output data')
+                transfromValue.should.be.equal(output.data)
+            })
+        })
+
+        describe('getSceneItemEnabled', function () {
+            it('should get enable state of a scene item in specified scene', async function () {
+                const path = 'Test Scene 2/`!@#$%^&*()_+[]{}'
+                const sceneItemEnabled = await _sceneItem.getSceneItemEnabled(networks, path.split('/'))
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal(`/sceneItem/${path}/enable`, 'Wrong OSC address')
+                output.data.should.be.equal(0, 'Wrong OSC output data')
+                sceneItemEnabled.should.be.false
+            })
+
+            it('should get enable state of a scene item in current scene', async function () {
+                const path = 'Scene Label 1'
+                const sceneItemEnabled = await _sceneItem.getSceneItemEnabled(networks, path.split('/'))
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal(`/sceneItem/${path}/enable`, 'Wrong OSC address')
+                output.data.should.be.equal(1, 'Wrong OSC output data')
+                sceneItemEnabled.should.be.true
+            })
+        })
+
+        describe('setSceneItemEnabled', function () {
+            it('should able to set enable state of a scene item in specified scene', async function () {
+                const path = 'Test Scene 3/Audio Input Capture'
+                await _sceneItem.setSceneItemEnabled(networks, path.split('/'), 0)
+                let sceneItemEnabled = await _sceneItem.getSceneItemEnabled(networks, path.split('/'))
+                sceneItemEnabled.should.be.false
+                await _sceneItem.setSceneItemEnabled(networks, path.split('/'), 1)
+                sceneItemEnabled = await _sceneItem.getSceneItemEnabled(networks, path.split('/'))
+                sceneItemEnabled.should.be.true
+            })
+
+            it('should able to set enable state of a scene item in specified scene', async function () {
+                const path = 'Scene Label 1'
+                await _sceneItem.setSceneItemEnabled(networks, path.split('/'), 0)
+                let sceneItemEnabled = await _sceneItem.getSceneItemEnabled(networks, path.split('/'))
+                sceneItemEnabled.should.be.false
+                await _sceneItem.setSceneItemEnabled(networks, path.split('/'), 1)
+                sceneItemEnabled = await _sceneItem.getSceneItemEnabled(networks, path.split('/'))
+                sceneItemEnabled.should.be.true
+            })
+        })
+
+        describe('sendSceneItemFeedback', function () {
+            it('should send a list of scene item names through OSC', async function () {
+                const expectedSceneItems = [
+                    'Scene Label 3',
+                    'Audio Input Capture',
+                    'Color Source',
+                    'Browser'
+                ]
+                
+                await _sceneItem.sendSceneItemFeedback(networks, 'Test Scene 3')
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal(`/sceneItem`, 'Wrong OSC address')
+                output.data.should.be.deep.equal(expectedSceneItems, 'Wrong OSC output data')
             })
         })
     })
