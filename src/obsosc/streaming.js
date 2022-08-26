@@ -1,10 +1,11 @@
-if (process.argv.includes('--unit-test')) {
+const DEBUG = process.argv.includes('--enable-log')
+const TEST = process.argv.includes('--unit-test')
+
+if (TEST) {
     module.exports = { processStreaming, getStreamStatus, startStream, stopStream, toggleStream, sendStreamingStateFeedback }
 } else {
     module.exports = { processStreaming, sendStreamingStateFeedback }
 }
-
-const DEBUG = process.argv.includes('--enable-log')
 
 async function processStreaming(networks, path, args) {
     if (path[0] === undefined) {

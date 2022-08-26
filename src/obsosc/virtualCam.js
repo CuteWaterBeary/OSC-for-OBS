@@ -1,10 +1,11 @@
-if (process.argv.includes('--unit-test')) {
+const DEBUG = process.argv.includes('--enable-log')
+const TEST = process.argv.includes('--unit-test')
+
+if (TEST) {
     module.exports = { processVirtualCam, getVirtualCamStatus, startVirtualCam, stopVirtualCam, toggleVirtualCam, sendVirtualCamStateFeedback }
 } else {
     module.exports = { processVirtualCam, sendVirtualCamStateFeedback }
 }
-
-const DEBUG = process.argv.includes('--enable-log')
 
 async function processVirtualCam(networks, path, args) {
     if (path[0] === undefined) {

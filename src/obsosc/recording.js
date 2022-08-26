@@ -1,10 +1,11 @@
-if (process.argv.includes('--unit-test')) {
+const DEBUG = process.argv.includes('--enable-log')
+const TEST = process.argv.includes('--unit-test')
+
+if (TEST) {
     module.exports = { processRecording, getRecordStatus, startRecord, stopRecord, toggleRecord, pauseRecord, resumeRecord, toggleRecordPause, sendRecordingStateFeedback, sendRecordingPauseStateFeedback }
 } else {
     module.exports = { processRecording, sendRecordingStateFeedback, sendRecordingPauseStateFeedback }
 }
-
-const DEBUG = process.argv.includes('--enable-log')
 
 async function processRecording(networks, path, args) {
     if (path[0] === undefined) {

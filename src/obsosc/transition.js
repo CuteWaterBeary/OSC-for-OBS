@@ -1,10 +1,11 @@
-if (process.argv.includes('--unit-test')) {
+const DEBUG = process.argv.includes('--enable-log')
+const TEST = process.argv.includes('--unit-test')
+
+if (TEST) {
     module.exports = { processTransition, getCurrentSceneTransition, setCurrentSceneTransition, getSceneTransitionList, getCurrentSceneTransitionDuration, setCurrentSceneTransitionDuration, getCurrentSceneTransitionCursor, setTBarPosition }
 } else {
     module.exports = { processTransition, setCurrentSceneTransition, setCurrentSceneTransitionDuration, setTBarPosition }
 }
-
-const DEBUG = process.argv.includes('--enable-log')
 
 async function processTransition(networks, path, args) {
     if (path[0] === undefined) {

@@ -1,10 +1,11 @@
-if (process.argv.includes('--unit-test')) {
+const DEBUG = process.argv.includes('--enable-log')
+const TEST = process.argv.includes('--unit-test')
+
+if (TEST) {
     module.exports = { processScene, processActiveScene, getSceneList, getCurrentProgramScene, setCurrentProgramScene, sendActiveSceneFeedback, sendSceneCompletedFeedback }
 } else {
     module.exports = { processScene, processActiveScene, getCurrentProgramScene, getSceneList, sendActiveSceneFeedback, sendSceneCompletedFeedback }
 }
-
-const DEBUG = process.argv.includes('--enable-log')
 
 async function processScene(networks, path, args) {
     if (path[0] === undefined) {

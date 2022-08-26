@@ -1,12 +1,13 @@
 const { parseSettingsPath, mergeSettings } = require('./utils')
 
-if (process.argv.includes('--unit-test')) {
+const DEBUG = process.argv.includes('--enable-log')
+const TEST = process.argv.includes('--unit-test')
+
+if (TEST) {
     module.exports = { processInput, getInputList, getInputKind, getInputSettings, setInputSettings, getInputSetting, setInputSetting, getInputDefaultSettings, getInputDefaultSetting, getInputPropertiesListPropertyItems, pressInputPropertiesButton }
 } else {
     module.exports = { processInput, getInputList }
 }
-
-const DEBUG = process.argv.includes('--enable-log')
 
 async function processInput(networks, path, args) {
     if (path[0] === undefined) {

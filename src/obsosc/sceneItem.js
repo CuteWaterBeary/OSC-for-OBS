@@ -1,12 +1,14 @@
 const { getCurrentProgramScene } = require('./scene')
 
-if (process.argv.includes('--unit-test')) {
+const DEBUG = process.argv.includes('--enable-log')
+const TEST = process.argv.includes('--unit-test')
+
+if (TEST) {
     module.exports = { processSceneItem, getSceneItemList, getSceneAndSceneItemId, getSceneItemTransform, setSceneItemTransform, getSceneItemTransformValue, getSceneItemEnabled, setSceneItemEnabled, sendSceneItemFeedback }
 } else {
     module.exports = { processSceneItem, getSceneItemList, sendSceneItemFeedback }
 }
 
-const DEBUG = process.argv.includes('--enable-log')
 const keywords = ['transform', 'enable', 'disable']
 
 async function processSceneItem(networks, path, args) {

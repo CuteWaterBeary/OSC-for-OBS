@@ -2,13 +2,14 @@ const { getSceneList } = require('./scene')
 const { getInputList } = require('./input')
 const { parseSettingsPath, mergeSettings } = require('./utils')
 
-if (process.argv.includes('--unit-test')) {
+const DEBUG = process.argv.includes('--enable-log')
+const TEST = process.argv.includes('--unit-test')
+
+if (TEST) {
     module.exports = { processSource, processSourceFilter, getSourceList, getSourceActive, getSourceFilterList, getSourceFilterSettings, setSourceFilterSettings, getSourceFilterDefaultSettings, getSourceFilterSetting, setSourceFilterSetting, getSourceFilter, getSourceFilterEnabled, setSourceFilterEnabled }
 } else {
     module.exports = { processSource }
 }
-
-const DEBUG = process.argv.includes('--enable-log')
 
 async function processSource(networks, path, args) {
     if (path[0] === undefined) {

@@ -2,13 +2,14 @@ const { getCurrentProgramScene } = require('./scene')
 const { getSceneItemList } = require('./sceneItem')
 const { getInputList } = require('./input')
 
-if (process.argv.includes('--unit-test')) {
+const DEBUG = process.argv.includes('--enable-log')
+const TEST = process.argv.includes('--unit-test')
+
+if (TEST) {
     module.exports = { processSourceAudio, getAudioInputList, updateAudioInputKindList, getInputVolume, setInputVolume, getInputMute, setInputMute, getSpecialInputs, getSceneAudioInputList, sendSceneAudioInputFeedback, sendAudioInputVolumeFeedback, sendAudioMuteFeedback }
 } else {
     module.exports = { updateAudioInputKindList, processSourceAudio, getAudioInputList, getSceneAudioInputList, sendSceneAudioInputFeedback, sendAudioInputVolumeFeedback, sendAudioMuteFeedback }
 }
-
-const DEBUG = process.argv.includes('--enable-log')
 
 let audioInputKindList = new Set()
 let otherInputKindList = new Set()

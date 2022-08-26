@@ -1,12 +1,13 @@
 const { setCurrentSceneTransition, setCurrentSceneTransitionDuration, setTBarPosition } = require('./transition')
 
-if (process.argv.includes('--unit-test')) {
+const DEBUG = process.argv.includes('--enable-log')
+const TEST = process.argv.includes('--unit-test')
+
+if (TEST) {
     module.exports = { processStudioMode, getStudioModeEnabled, setStudioModeEnabled, toggleStudioMode, getCurrentPreviewScene, setCurrentPreviewScene, transitionToProgram, triggerStudioModeTransition, sendStudioModeStateFeedback, sendStudioPreviewSceneFeedback }
 } else {
     module.exports = { processStudioMode, sendStudioModeStateFeedback, sendStudioPreviewSceneFeedback }
 }
-
-const DEBUG = process.argv.includes('--enable-log')
 
 async function processStudioMode(networks, path, args) {
     if (path[0] === undefined) {

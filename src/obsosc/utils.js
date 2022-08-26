@@ -1,4 +1,6 @@
-if (process.argv.includes('--unit-test')) {
+const TEST = process.argv.includes('--unit-test')
+
+if (TEST) {
     module.exports = { mergeSettings, parseSettingsPath }
 } else {
     module.exports = { mergeSettings, parseSettingsPath }

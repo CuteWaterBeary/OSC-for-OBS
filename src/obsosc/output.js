@@ -1,10 +1,12 @@
-if (process.argv.includes('--unit-test')) {
+const DEBUG = process.argv.includes('--enable-log')
+const TEST = process.argv.includes('--unit-test')
+
+if (TEST) {
     module.exports = { processOutput, getOutputList, getOutputStatus, startOutput, stopOutput, toggleOutput }
 } else {
     module.exports = { processOutput }
 }
 
-const DEBUG = process.argv.includes('--enable-log')
 
 async function processOutput(networks, path, args) {
     if (path[0] === undefined) {
@@ -44,12 +46,19 @@ async function processOutput(networks, path, args) {
 }
 
 // Note: GetOutputList response: { outputs: [GetOutputStatus response] }
-async function getOutputList(networks) {
+async function getOutputList(networks, sendOSC = true) {
     const outputListPath = '/output'
     try {
         const { outputs } = await networks.obs.call('GetOutputList')
-        const outputList = outputs.flatMap(output => output.outputName)
-        networks.oscOut.send(outputListPath, outputList)
+        if (sendOSC) {
+            try {
+                networks.oscOut.send(outputListPath, outputs.flatMap(output => output.outputName))
+            } catch (e) {
+                if (DEBUG) console.error('getOutputList -- Failed to send output list:', e)
+            }
+        }
+
+        return outputs
     } catch (e) {
         if (DEBUG) console.error('getOutputList -- Failed to get output list:', e)
     }
@@ -57,16 +66,24 @@ async function getOutputList(networks) {
 
 
 // TODO: Add more output option (outputReconnecting, outputDuration, etc.)
-async function getOutputStatus(networks, outputName) {
+async function getOutputStatus(networks, outputName, sendOSC = true) {
     if (outputName === undefined) {
-        getOutputList(networks)
+        if (DEBUG) console.error('getOutputInfo -- Output name not specified')
         return
     }
 
     const outputPath = `/output/${outputName}`
     try {
         const { outputActive } = await networks.obs.call('GetOutputStatus', { outputName })
-        networks.oscOut.send(outputPath, outputActive ? 1 : 0)
+        if (sendOSC) {
+            try {
+                networks.oscOut.send(outputPath, outputActive ? 1 : 0)
+            } catch (e) {
+                if (DEBUG) console.error('getOutputInfo -- Failed to send output info:', e)
+            }
+        }
+
+        return outputActive
     } catch (e) {
         if (DEBUG) console.error('getOutputInfo -- Failed to get output info:', e)
     }
