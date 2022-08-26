@@ -9,8 +9,9 @@ const _input = require('../src/obsosc/input')
 const _output = require('../src/obsosc/output')
 const _profile = require('../src/obsosc/profile')
 const _recording = require('../src/obsosc/recording')
-
 const _scene = require('../src/obsosc/scene')
+const _sceneCollection = require('../src/obsosc/sceneCollection')
+
 const { parseSettingsPath, mergeSettings } = require('../src/obsosc/utils')
 
 const delay = function (time) {
@@ -415,7 +416,7 @@ describe('OBSOSC modules', function () {
         })
 
         describe('toggleOutput', function () {
-            it('should able to start/stop an output (+100 ms delay for status change)', async function () {
+            it('should able to start/stop an output (+100 ms waiting for status change)', async function () {
                 await _output.toggleOutput(networks, 'virtualcam_output')
                 let outputActive = await _output.getOutputStatus(networks, 'virtualcam_output')
                 outputActive.should.be.true
@@ -440,7 +441,7 @@ describe('OBSOSC modules', function () {
                 profiles[0].should.be.a('string')
             })
         })
-        
+
         describe('getCurrentProfile', function () {
             it('should get current profile', async function () {
                 const currentProfileName = await _profile.getCurrentProfile(networks)
@@ -483,43 +484,43 @@ describe('OBSOSC modules', function () {
                 outputPaused.should.be.equal(networks.oscOut.outputs[1].data === 1)
             })
         })
-        
+
         describe('startRecord', function () {
             it.skip('should able to start recording (do not test this)', async function () {
                 await _recording.startRecord(networks)
             })
         })
-        
+
         describe('stopRecord', function () {
             it.skip('should able to stop recording (do not test this)', async function () {
                 await _recording.stopRecord(networks)
             })
         })
-        
+
         describe('toggleRecord', function () {
             it.skip('should able to start/stop recording (do not test this)', async function () {
                 await _recording.toggleRecord(networks)
             })
         })
-        
+
         describe('pauseRecord', function () {
             it.skip('should able to pause recording (do not test this)', async function () {
                 await _recording.pauseRecord(networks)
             })
         })
-        
+
         describe('resumeRecord', function () {
             it.skip('should able to resume recording (do not test this)', async function () {
                 await _recording.resumeRecord(networks)
             })
         })
-        
+
         describe('toggleRecordPause', function () {
             it.skip('should able to pause/resume recording (do not test this)', async function () {
                 await _recording.toggleRecordPause(networks)
             })
         })
-        
+
         describe('sendRecordingStateFeedback', function () {
             it('should send start/stop state of recording through OSC', async function () {
                 await _recording.sendRecordingStateFeedback(networks)
@@ -529,7 +530,7 @@ describe('OBSOSC modules', function () {
                 output.data.should.be.a('number', 'Wrong OSC output type').and.oneOf([0, 1], 'Wrong OSC output data')
             })
         })
-        
+
         describe('sendRecordingPauseStateFeedback', function () {
             it('should send pause/resume state of recording through OSC', async function () {
                 await _recording.sendRecordingPauseStateFeedback(networks)
@@ -539,7 +540,7 @@ describe('OBSOSC modules', function () {
                 output.data.should.be.a('number', 'Wrong OSC output type').and.oneOf([0, 1], 'Wrong OSC output data')
             })
         })
-        
+
     })
 
     describe('Scene', function () {
@@ -601,6 +602,58 @@ describe('OBSOSC modules', function () {
                 const output = networks.oscOut.outputs[0]
                 output.address.should.be.equal('/activeSceneCompleted', 'Wrong OSC address')
                 output.data.should.be.equal('Test Scene 1')
+            })
+        })
+    })
+
+    describe('Scene Collection', function () {
+        describe('getSceneList', function () {
+            it('should get a list of scene collection names', async function () {
+                const sceneCollections = await _sceneCollection.getSceneCollectionList(networks)
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('/sceneCollection', 'Wrong OSC address')
+                output.data.should.be.an('Array', 'Wrong OSC output format').and.equal(sceneCollections, 'Wrong OSC output data')
+                sceneCollections.should.be.include('Test', 'Wrong scene collection name (should be named Test)')
+            })
+        })
+
+        describe('getCurrentSceneCollection', function () {
+            it('should get current scene collection', async function () {
+                const currentSceneCollectionName = await _sceneCollection.getCurrentSceneCollection(networks)
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('/sceneCollection/current', 'Wrong OSC address')
+                output.data.should.be.equal('Test', 'Wrong OSC output data')
+                currentSceneCollectionName.should.be.equal(output.data)
+            })
+        })
+
+        describe('setCurrentSceneCollection', function () {
+            it('should be able to set current scene collection', async function () {
+                await _sceneCollection.setCurrentSceneCollection(networks, 'Test')
+            })
+        })
+
+        describe('sendCurrentSceneCollectionFeedback', function () {
+            it('should send current scene collection name through OSC', async function () {
+                const sceneCollectionName = 'Test Scene Collection'
+                await _sceneCollection.sendCurrentSceneCollectionFeedback(networks, sceneCollectionName)
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('/sceneCollection/current', 'Wrong OSC address')
+                output.data.should.be.equal(sceneCollectionName, 'Wrong OSC output data')
+            })
+        })
+
+        describe('getSceneList', function () {
+            it('should get a list of scene name', async function () {
+                const sceneCollections = await _sceneCollection.getSceneCollectionList(networks)
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('/sceneCollection', 'Wrong OSC address')
+                output.data.should.be.an('Array', 'Wrong OSC output format').and.equal(sceneCollections, 'Wrong OSC output data')
+                sceneCollections.should.be.include('Test', 'Wrong scene collection name (should be named Test)')
             })
         })
     })

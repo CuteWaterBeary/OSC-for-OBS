@@ -34,20 +34,26 @@ async function getSceneCollectionList(networks, sendOSC = true) {
                 if (DEBUG) console.error('getSceneCollectionList -- Failed to send scene collection list', e)
             }
         }
+
+        return sceneCollections
     } catch (e) {
         if (DEBUG) console.error('getSceneCollectionList -- Failed to get scene collection list:', e)
     }
 }
 
-async function getCurrentSceneCollection(networks) {
+async function getCurrentSceneCollection(networks, sendOSC = true) {
     const currentSceneCollectionPath = '/sceneCollection/current'
     try {
-        const { sceneCollectionName } = await networks.obs.call('GetSceneCollectionList')
-        try {
-            networks.oscOut.send(currentSceneCollectionPath, sceneCollectionName)
-        } catch (e) {
-            if (DEBUG) console.error('getCurrentSceneCollection -- Failed to send current scene collection:', e)
+        const { currentSceneCollectionName } = await networks.obs.call('GetSceneCollectionList')
+        if (sendOSC) {
+            try {
+                networks.oscOut.send(currentSceneCollectionPath, currentSceneCollectionName)
+            } catch (e) {
+                if (DEBUG) console.error('getCurrentSceneCollection -- Failed to send current scene collection:', e)
+            }
         }
+
+        return currentSceneCollectionName
     } catch (e) {
         if (DEBUG) console.error('getCurrentSceneCollection -- Failed to get current scene collection:', e)
     }
