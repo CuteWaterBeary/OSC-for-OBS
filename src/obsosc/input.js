@@ -166,12 +166,12 @@ async function getInputDefaultSetting(networks, inputName, settingPath) {
     })
 
     if (settingValue === undefined) {
-        if (DEBUG) console.error(`getInputDefaultSetting -- setting ${settingPath.join('/')} not found in input ${inputName}`)
+        if (DEBUG) console.error(`getInputDefaultSetting -- Setting ${settingPath.join('/')} not found in input ${inputName}`)
         return
     }
 
     if (typeof (settingValue) === 'object') {
-        if (DEBUG) console.error(`getInputDefaultSetting -- setting ${settingPath.join('/')} in input ${inputName} have subsettings`)
+        if (DEBUG) console.error(`getInputDefaultSetting -- Setting ${settingPath.join('/')} in input ${inputName} have subsettings`)
         return
     }
 

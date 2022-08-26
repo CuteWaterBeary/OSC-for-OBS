@@ -19,7 +19,7 @@ Control and listen to [OBS](https://obsproject.com/) via OSC protocol
 
 # Scene and Source Naming
 
-To prevent unexpected behaviour, it's recommended to avoid the use of following names for your scenes/sources/profiles/scene collections (case sensitive):
+To prevent unexpected behaviour, it's recommended to avoid the use of following names for your scenes/sources/filters/profiles/scene collections (case sensitive):
 
 - current
 
@@ -28,6 +28,8 @@ To prevent unexpected behaviour, it's recommended to avoid the use of following 
 - enable
 
 - disable
+
+- Any other names that contains slash(`/`)
 
 While white space, symbols and non-ascii characters works fine so far in my testing, if you encountered any issue, please try renaming them to ascii characters and replace white space with underscore `_` or dash `-`
 

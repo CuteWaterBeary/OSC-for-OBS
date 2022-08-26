@@ -12,6 +12,7 @@ const _recording = require('../src/obsosc/recording')
 const _scene = require('../src/obsosc/scene')
 const _sceneCollection = require('../src/obsosc/sceneCollection')
 const _sceneItem = require('../src/obsosc/sceneItem')
+const _source = require('../src/obsosc/source')
 
 const { parseSettingsPath, mergeSettings } = require('../src/obsosc/utils')
 
@@ -669,7 +670,7 @@ describe('OBSOSC modules', function () {
                     'sourceName',
                     'sourceType'
                 ]
-                
+
                 const sceneItems = await _sceneItem.getSceneItemList(networks, 'Test Scene 2')
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
@@ -696,7 +697,7 @@ describe('OBSOSC modules', function () {
                     'sourceName',
                     'sourceType'
                 ]
-                
+
                 const sceneItems = await _sceneItem.getSceneItemList(networks)
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
@@ -752,7 +753,7 @@ describe('OBSOSC modules', function () {
                 output.data.should.be.an('Array', 'Wrong OSC output format').that.deep.equal(Object.keys(sceneItemTransform), 'Wrong OSC output data')
                 sceneItemTransform.should.be.an('object').that.has.all.keys(expectedKeys)
             })
-            
+
             it('should get transform info of a scene item in current scene', async function () {
                 const path = 'Readme'
                 const expectedKeys = [
@@ -810,7 +811,7 @@ describe('OBSOSC modules', function () {
         describe('getSceneItemTransformValue', function () {
             it('should get transform value of a scene item in specified scene', async function () {
                 const path = 'Test Scene 3/Browser'
-                const transfromValue = await _sceneItem.getSceneItemTransformValue(networks, path.split('/'), 'positionY')                
+                const transfromValue = await _sceneItem.getSceneItemTransformValue(networks, path.split('/'), 'positionY')
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
                 output.address.should.be.equal(`/sceneItem/${path}/transform/positionY`, 'Wrong OSC address')
@@ -881,12 +882,193 @@ describe('OBSOSC modules', function () {
                     'Color Source',
                     'Browser'
                 ]
-                
+
                 await _sceneItem.sendSceneItemFeedback(networks, 'Test Scene 3')
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
                 output.address.should.be.equal(`/sceneItem`, 'Wrong OSC address')
                 output.data.should.be.deep.equal(expectedSceneItems, 'Wrong OSC output data')
+            })
+        })
+    })
+
+    describe('Source', function () {
+        describe('getSourceList', function () {
+            it('should get a list of source names', async function () {
+                const sourceList = await _source.getSourceList(networks)
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('/source', 'Wrong OSC address')
+                output.data.should.be.an('Array', 'Wrong OSC output format').that.include.members(['Test Scene 2', 'Color Source', 'Audio Input Capture'])
+                sourceList.should.be.an('Array').that.deep.equal(output.data)
+            })
+        })
+
+        describe('getSourceActive', function () {
+            it('should get the active state of a source', async function () {
+                let videoActive = await _source.getSourceActive(networks, '`!@#$%^&*()_+[]{}')
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('/source/`!@#$%^&*()_+[]{}', 'Wrong OSC address')
+                output.data.should.be.equal(0, 'Wrong OSC output data')
+                videoActive.should.be.false
+                videoActive = await _source.getSourceActive(networks, 'テスト　テキスト')
+                videoActive.should.be.false
+                videoActive = await _source.getSourceActive(networks, 'Readme')
+                videoActive.should.be.true
+            })
+        })
+
+        describe('getSourceFilterList', function () {
+            it('should get a list of applied filters for a source', async function () {
+                const expectedKeys = [
+                    'filterEnabled',
+                    'filterIndex',
+                    'filterKind',
+                    'filterName',
+                    'filterSettings'
+                ]
+                const filters = await _source.getSourceFilterList(networks, 'Browser')
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('/source/Browser/filters', 'Wrong OSC address')
+                output.data.should.be.an('Array', 'Wrong OSC output format').that.deep.equal(['Limiter', 'Color Correction'], 'Wrong OSC output data')
+                filters.flatMap(filter => filter.filterName).should.deep.equal(output.data)
+                filters[0].should.be.an('object').that.has.keys(expectedKeys)
+            })
+        })
+
+        describe('getSourceFilterSettings', function () {
+            it('should get a list of settings for a filter of a source', async function () {
+                const expectedKeys = [
+                    'brightness',
+                    'color_add',
+                    'color_multiply',
+                    'contrast',
+                    'gamma',
+                    'hue_shift',
+                    'opacity',
+                    'saturation'
+                ]
+                const filterSettings = await _source.getSourceFilterSettings(networks, 'Browser', 'Color Correction')
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('/source/Browser/filters/Color Correction/settings', 'Wrong OSC address')
+                output.data.should.be.an('Array', 'Wrong OSC output format').that.deep.equal(expectedKeys, 'Wrong OSC output data')
+                filterSettings.should.be.an('object').that.has.keys(expectedKeys)
+                filterSettings.saturation.should.be.equal(2.57)
+                filterSettings.hue_shift.should.be.equal(-160.36)
+            })
+        })
+
+        describe('setSourceFilterSettings', function () {
+            it('should able to set settings for a filter of a source', async function () {
+                const settings = { release_time: 75 }
+                await _source.setSourceFilterSettings(networks, 'Browser', 'Limiter', settings)
+                let filterSettings = await _source.getSourceFilterSettings(networks, 'Browser', 'Limiter')
+                filterSettings.release_time.should.be.equal(75)
+                filterSettings.threshold.should.be.equal(-6)
+
+                settings.threshold = -8
+                await _source.setSourceFilterSettings(networks, 'Browser', 'Limiter', settings)
+                filterSettings = await _source.getSourceFilterSettings(networks, 'Browser', 'Limiter')
+                filterSettings.release_time.should.be.equal(75)
+                filterSettings.threshold.should.be.equal(-8)
+
+                settings.release_time = 60
+                settings.threshold = -6
+                await _source.setSourceFilterSettings(networks, 'Browser', 'Limiter', settings)
+                filterSettings = await _source.getSourceFilterSettings(networks, 'Browser', 'Limiter')
+                filterSettings.release_time.should.be.equal(60)
+                filterSettings.threshold.should.be.equal(-6)
+            })
+        })
+
+        describe('getSourceFilterDefaultSettings (WIP)', function () {
+            it.skip('should get default settings for a filter', async function () {
+                // const sourceList = await _source.getSourceFilterDefaultSettings(networks)
+                // networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                // const output = networks.oscOut.outputs[0]
+                // output.address.should.be.equal('/source', 'Wrong OSC address')
+                // output.data.should.be.an('Array', 'Wrong OSC output format').that.include.members(['Test Scene 2', 'Color Source', 'Audio Input Capture'])
+                // sourceList.should.be.an('Array').that.deep.equal(output.data)
+            })
+        })
+
+        describe('getSourceFilterSetting', function () {
+            it('should get the value of a setting for a filter of a source', async function () {
+                const settingPath = 'saturation'
+                const settingValue = await _source.getSourceFilterSetting(networks, 'Browser', 'Color Correction', settingPath.split('/'))
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal(`/source/Browser/filters/Color Correction/settings/${settingPath}`, 'Wrong OSC address')
+                output.data.should.be.equal(2.57, 'Wrong OSC output data')
+                settingValue.should.be.equal(output.data)
+            })
+        })
+
+        describe('setSourceFilterSetting', function () {
+            it('able to set a setting for a filter of a source', async function () {
+                const settingPath = 'saturation'
+                await _source.setSourceFilterSetting(networks, 'Browser', 'Color Correction', settingPath.split('/'), -1)
+                let settingValue = await _source.getSourceFilterSetting(networks, 'Browser', 'Color Correction', settingPath.split('/'))
+                settingValue.should.be.equal(-1)
+                await _source.setSourceFilterSetting(networks, 'Browser', 'Color Correction', settingPath.split('/'), 2.57)
+                settingValue = await _source.getSourceFilterSetting(networks, 'Browser', 'Color Correction', settingPath.split('/'))
+                settingValue.should.be.equal(2.57)
+            })
+        })
+
+        describe('getSourceFilter', function () {
+            it('should get properties and enable state for a filter of a source', async function () {
+                const expectedKeys = [
+                    'filterEnabled',
+                    'filterIndex',
+                    'filterKind',
+                    'filterSettings'
+                ]
+
+                let response = await _source.getSourceFilter(networks, '測試文字', 'Scaling and Aspect Ratio')
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                let output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('source/測試文字/filters/Scaling and Aspect Ratio', 'Wrong OSC address')
+                output.data.should.be.equal(0, 'Wrong OSC output data')
+                response.should.be.an('object').that.has.keys(expectedKeys)
+
+                response = await _source.getSourceFilter(networks, '測試文字', 'Chroma Key')
+                output = networks.oscOut.outputs[1]
+                output.address.should.be.equal('source/測試文字/filters/Chroma Key', 'Wrong OSC address')
+                output.data.should.be.equal(1, 'Wrong OSC output data')
+            })
+        })
+
+        describe('getSourceFilterEnabled', function () {
+            it('should get enable state for a filter of a source', async function () {
+                let filterEnabled = await _source.getSourceFilterEnabled(networks, '測試文字', 'Scaling and Aspect Ratio')
+
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                let output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('source/測試文字/filters/Scaling and Aspect Ratio', 'Wrong OSC address')
+                output.data.should.be.equal(0, 'Wrong OSC output data')
+                filterEnabled.should.be.false
+
+                filterEnabled = await _source.getSourceFilterEnabled(networks, '測試文字', 'Chroma Key')
+                output = networks.oscOut.outputs[1]
+                output.address.should.be.equal('source/測試文字/filters/Chroma Key', 'Wrong OSC address')
+                output.data.should.be.equal(1, 'Wrong OSC output data')
+                filterEnabled.should.be.true
+            })
+        })
+
+        describe('setSourceFilterEnabled', function () {
+            it('should be able to set enable state for a filter of a source', async function () {
+                await _source.setSourceFilterEnabled(networks, 'Browser', 'Color Correction', 0)
+                let filterEnabled = await _source.getSourceFilterEnabled(networks, 'Browser', 'Color Correction')
+                filterEnabled.should.be.false
+
+                await _source.setSourceFilterEnabled(networks, 'Browser', 'Color Correction', 1)
+                filterEnabled = await _source.getSourceFilterEnabled(networks, 'Browser', 'Color Correction')
+                filterEnabled.should.be.true
             })
         })
     })
