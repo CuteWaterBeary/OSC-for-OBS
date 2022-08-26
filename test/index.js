@@ -8,6 +8,7 @@ const _audio = require('../src/obsosc/audio')
 const _input = require('../src/obsosc/input')
 const _output = require('../src/obsosc/output')
 const _profile = require('../src/obsosc/profile')
+const _recording = require('../src/obsosc/recording')
 
 const _scene = require('../src/obsosc/scene')
 const { parseSettingsPath, mergeSettings } = require('../src/obsosc/utils')
@@ -391,7 +392,7 @@ describe('OBSOSC modules', function () {
         })
 
         describe('getOutputStatus', function () {
-            it('should get output status of an output', async function () {
+            it('should get current status of an output', async function () {
                 const outputActive = await _output.getOutputStatus(networks, 'simple_file_output')
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
@@ -467,6 +468,78 @@ describe('OBSOSC modules', function () {
                 output.data.should.be.equal(profileName, 'Wrong OSC output data')
             })
         })
+    })
+
+    describe('Recording', function () {
+        describe('getRecordStatus', function () {
+            it('should get current status of recording', async function () {
+                const { outputActive, outputPaused } = await _recording.getRecordStatus(networks)
+                networks.oscOut.outputs.should.have.lengthOf(2, `Too ${networks.oscOut.outputs.length < 2 ? 'little' : 'many'} OSC output`)
+                networks.oscOut.outputs[0].address.should.be.equal('/recording', 'Wrong OSC address')
+                networks.oscOut.outputs[0].data.should.be.a('number', 'Wrong OSC output type').and.oneOf([0, 1], 'Wrong OSC output data')
+                networks.oscOut.outputs[1].address.should.be.equal('/recording/pause', 'Wrong OSC address')
+                networks.oscOut.outputs[1].data.should.be.a('number', 'Wrong OSC output type').and.oneOf([0, 1], 'Wrong OSC output data')
+                outputActive.should.be.equal(networks.oscOut.outputs[0].data === 1)
+                outputPaused.should.be.equal(networks.oscOut.outputs[1].data === 1)
+            })
+        })
+        
+        describe('startRecord', function () {
+            it.skip('should able to start recording (do not test this)', async function () {
+                await _recording.startRecord(networks)
+            })
+        })
+        
+        describe('stopRecord', function () {
+            it.skip('should able to stop recording (do not test this)', async function () {
+                await _recording.stopRecord(networks)
+            })
+        })
+        
+        describe('toggleRecord', function () {
+            it.skip('should able to start/stop recording (do not test this)', async function () {
+                await _recording.toggleRecord(networks)
+            })
+        })
+        
+        describe('pauseRecord', function () {
+            it.skip('should able to pause recording (do not test this)', async function () {
+                await _recording.pauseRecord(networks)
+            })
+        })
+        
+        describe('resumeRecord', function () {
+            it.skip('should able to resume recording (do not test this)', async function () {
+                await _recording.resumeRecord(networks)
+            })
+        })
+        
+        describe('toggleRecordPause', function () {
+            it.skip('should able to pause/resume recording (do not test this)', async function () {
+                await _recording.toggleRecordPause(networks)
+            })
+        })
+        
+        describe('sendRecordingStateFeedback', function () {
+            it('should send start/stop state of recording through OSC', async function () {
+                await _recording.sendRecordingStateFeedback(networks)
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('/recording', 'Wrong OSC address')
+                output.data.should.be.a('number', 'Wrong OSC output type').and.oneOf([0, 1], 'Wrong OSC output data')
+            })
+        })
+        
+        describe('sendRecordingPauseStateFeedback', function () {
+            it('should send pause/resume state of recording through OSC', async function () {
+                await _recording.sendRecordingPauseStateFeedback(networks)
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('/recording/pause', 'Wrong OSC address')
+                output.data.should.be.a('number', 'Wrong OSC output type').and.oneOf([0, 1], 'Wrong OSC output data')
+            })
+        })
+        
     })
 
     describe('Scene', function () {
