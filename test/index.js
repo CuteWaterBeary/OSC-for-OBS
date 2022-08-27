@@ -16,6 +16,7 @@ const _source = require('../src/obsosc/source')
 const _streaming = require('../src/obsosc/streaming')
 const _studio = require('../src/obsosc/studio')
 const _transition = require('../src/obsosc/transition')
+const _virtualCam = require('../src/obsosc/virtualCam')
 
 const { parseSettingsPath, mergeSettings } = require('../src/obsosc/utils')
 
@@ -411,12 +412,18 @@ describe('OBSOSC modules', function () {
         describe('startOutput', function () {
             it('should able to start an output', async function () {
                 await _output.startOutput(networks, 'virtualcam_output')
+                await delay(100)
+                outputActive = await _output.getOutputStatus(networks, 'virtualcam_output')
+                outputActive.should.be.true
             })
         })
 
         describe('stopOutput', function () {
             it('should able to stop an output', async function () {
                 await _output.stopOutput(networks, 'virtualcam_output')
+                await delay(100)
+                outputActive = await _output.getOutputStatus(networks, 'virtualcam_output')
+                outputActive.should.be.false
             })
         })
 
@@ -1303,7 +1310,6 @@ describe('OBSOSC modules', function () {
                 output.data.should.be.equal('Test Scene 2', 'Wrong OSC output data')
             })
         })
-
     })
 
     describe('Transition', function () {
@@ -1435,6 +1441,60 @@ describe('OBSOSC modules', function () {
                 await _studio.setStudioModeEnabled(networks, 0)
                 await _transition.setCurrentSceneTransition(networks, 'Cut')
                 await _scene.setCurrentProgramScene(networks, 'Test Scene 1')
+            })
+        })
+    })
+    
+    describe('Virtual Camera', function () {
+        describe('getVirtualCamStatus', function () {
+            it('should get current status of virtual camera', async function () {
+                const outputActive = await _virtualCam.getVirtualCamStatus(networks)
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('/virtualCam', 'Wrong OSC address')
+                output.data.should.be.a('number', 'Wrong OSC output type').and.oneOf([0, 1], 'Wrong OSC output data')
+                outputActive.should.be.a('boolean')
+            })
+        })
+
+        describe('startVirtualCam', function () {
+            it('should able to start virtual camera (+100 ms delay)', async function () {
+                await _virtualCam.startVirtualCam(networks)
+                await delay(100)
+                const outputActive = await _virtualCam.getVirtualCamStatus(networks)
+                outputActive.should.be.true
+            })
+        })
+
+        describe('stopOutput', function () {
+            it('should able to stop virtual camera (+100 ms delay)', async function () {
+                await _virtualCam.stopVirtualCam(networks)
+                await delay(100)
+                const outputActive = await _virtualCam.getVirtualCamStatus(networks)
+                outputActive.should.be.false
+            })
+        })
+
+        describe('toggleVirtualCam', function () {
+            it('should able to start/stop virtual camera (+200 ms delay)', async function () {
+                await _virtualCam.toggleVirtualCam(networks)
+                await delay(100)
+                let outputActive = await _virtualCam.getVirtualCamStatus(networks)
+                outputActive.should.be.true
+                await _virtualCam.toggleVirtualCam(networks)
+                await delay(100)
+                outputActive =  await _virtualCam.getVirtualCamStatus(networks)
+                outputActive.should.be.false
+            })
+        })
+
+        describe('sendVirtualCamStateFeedback', function () {
+            it('should send current virtual camera state through OSC', async function () {
+                await _virtualCam.sendVirtualCamStateFeedback(networks, 1)
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('/virtualCam', 'Wrong OSC address')
+                output.data.should.be.equal(1, 'Wrong OSC output data')
             })
         })
     })
