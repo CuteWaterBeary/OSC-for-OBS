@@ -18,13 +18,12 @@ const _studio = require('../src/obsosc/studio')
 const _transition = require('../src/obsosc/transition')
 const _virtualCam = require('../src/obsosc/virtualCam')
 
-const { parseSettingsPath, mergeSettings } = require('../src/obsosc/utils')
-
 const delay = function (time) {
     return new Promise(resolve => {
         setTimeout(resolve, time);
     })
 }
+
 const testConfigPath = './test/config.json'
 const configText = `You need to have a config.json in test folder with following structure:
         {
@@ -150,15 +149,17 @@ describe('OBSOSC modules', function () {
         })
 
         describe('setInputVolume', function () {
-            it('should able to set input volume in mul', async function () {
+            it('should able to set input volume in mul (+100 ms delay)', async function () {
                 await _audio.setInputVolume(networks, 'Audio Input Capture', 0)
+                await delay(100)
                 const { inputVolumeMul, inputVolumeDb } = await _audio.getInputVolume(networks, 'Audio Input Capture')
                 inputVolumeMul.should.be.equal(0)
                 inputVolumeDb.should.be.equal(-100)
             })
 
-            it('should able to set input volume in dB', async function () {
+            it('should able to set input volume in dB (+100 ms delay)', async function () {
                 await _audio.setInputVolume(networks, 'Audio Input Capture', 0, true)
+                await delay(100)
                 const { inputVolumeMul, inputVolumeDb } = await _audio.getInputVolume(networks, 'Audio Input Capture')
                 inputVolumeMul.should.be.equal(1)
                 inputVolumeDb.should.be.equal(0)
@@ -177,14 +178,16 @@ describe('OBSOSC modules', function () {
         })
 
         describe('setInputMute', function () {
-            it('should be able to mute an input', async function () {
+            it('should be able to mute an input (+100 ms delay)', async function () {
                 await _audio.setInputMute(networks, 'Audio Input Capture', 1)
+                await delay(100)
                 const mute = await _audio.getInputMute(networks, 'Audio Input Capture')
                 mute.should.be.true
             })
 
-            it('should be able to unmute an input', async function () {
+            it('should be able to unmute an input (+100 ms delay)', async function () {
                 await _audio.setInputMute(networks, 'Audio Input Capture', 0)
+                await delay(100)
                 const mute = await _audio.getInputMute(networks, 'Audio Input Capture')
                 mute.should.be.false
             })
@@ -305,13 +308,15 @@ describe('OBSOSC modules', function () {
         })
 
         describe('setInputSettings', function () {
-            it('should be able to set the current settings of an input', async function () {
+            it('should be able to set the current settings of an input (+200 ms delay)', async function () {
                 let inputSettings = { font: { size: 128 } }
                 await _input.setInputSettings(networks, 'Scene Label 1', inputSettings)
+                await delay(100)
                 let currentInputSettings = await _input.getInputSettings(networks, 'Scene Label 1')
                 currentInputSettings.font.size.should.be.equal(128)
                 inputSettings.font.size = 96
                 await _input.setInputSettings(networks, 'Scene Label 1', inputSettings)
+                await delay(100)
                 currentInputSettings = await _input.getInputSettings(networks, 'Scene Label 1')
                 currentInputSettings.font.size.should.be.equal(96)
             })
@@ -329,13 +334,15 @@ describe('OBSOSC modules', function () {
         })
 
         describe('setInputSetting', function () {
-            it('should be able to set value of an input\'s setting', async function () {
+            it('should be able to set value of an input\'s setting (+200 ms delay)', async function () {
                 await _input.setInputSetting(networks, 'Color Source', 'height'.split('/'), 512)
+                await delay(100)
                 let currentInputSettings = await _input.getInputSettings(networks, 'Color Source', false)
                 currentInputSettings.width.should.be.equal(256)
                 currentInputSettings.height.should.be.equal(512)
                 currentInputSettings.color.should.be.equal(4279676924)
                 await _input.setInputSetting(networks, 'Color Source', 'height'.split('/'), 256)
+                await delay(100)
                 currentInputSettings = await _input.getInputSettings(networks, 'Color Source', false)
                 currentInputSettings.width.should.be.equal(256)
                 currentInputSettings.height.should.be.equal(256)
@@ -465,8 +472,9 @@ describe('OBSOSC modules', function () {
         })
 
         describe('setCurrentProfile', function () {
-            it('should be able to set current profile', async function () {
+            it('should be able to set current profile (+100 ms delay)', async function () {
                 const currentProfileName = await _profile.getCurrentProfile(networks)
+                await delay(100)
                 await _profile.setCurrentProfile(networks, currentProfileName)
             })
         })
@@ -552,7 +560,6 @@ describe('OBSOSC modules', function () {
                 output.data.should.be.a('number', 'Wrong OSC output type').and.oneOf([0, 1], 'Wrong OSC output data')
             })
         })
-
     })
 
     describe('Scene', function () {
@@ -576,24 +583,30 @@ describe('OBSOSC modules', function () {
 
         describe('getCurrentProgramScene', function () {
             it('should get the active scene name', async function () {
-                const sceneList = await _scene.getCurrentProgramScene(networks)
+                const currentProgramSceneName = await _scene.getCurrentProgramScene(networks)
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
                 output.address.should.be.equal('/activeScene', 'Wrong OSC address')
                 output.data.should.be.deep.equal('Test Scene 1', 'Wrong OSC output data')
-                sceneList.should.be.deep.equal('Test Scene 1')
+                currentProgramSceneName.should.be.deep.equal('Test Scene 1')
             })
         })
 
         describe('setCurrentProgramScene', function () {
-            it('should be able to set active scene by name', async function () {
-                const sceneName = 'Test Scene 1'
+            it('should be able to set active scene by name (+100 ms delay)', async function () {
+                const sceneName = 'Test Scene 2'
                 await _scene.setCurrentProgramScene(networks, sceneName)
+                await delay(100)
+                const currentProgramSceneName = await _scene.getCurrentProgramScene(networks)
+                currentProgramSceneName.should.be.deep.equal('Test Scene 2')
             })
 
-            it('should be able to set active scene by index', async function () {
+            it('should be able to set active scene by index (+1050 ms delay)', async function () {
                 const sceneIndex = 0
                 await _scene.setCurrentProgramScene(networks, sceneIndex)
+                await delay(1050)
+                const currentProgramSceneName = await _scene.getCurrentProgramScene(networks)
+                currentProgramSceneName.should.be.deep.equal('Test Scene 1')
             })
         })
 
@@ -797,22 +810,26 @@ describe('OBSOSC modules', function () {
         })
 
         describe('setSceneItemTransform', function () {
-            it('should be able to set transform info of a scene item in specified scene', async function () {
+            it('should be able to set transform info of a scene item in specified scene (+200 ms delay)', async function () {
                 const path = 'Test Scene 3/Browser'
                 await _sceneItem.setSceneItemTransform(networks, path.split('/'), 'cropTop', 100)
+                await delay(100)
                 let sceneItemTransform = await _sceneItem.getSceneItemTransform(networks, path.split('/'))
                 sceneItemTransform.cropTop.should.be.equal(100)
                 await _sceneItem.setSceneItemTransform(networks, path.split('/'), 'cropTop', 0)
+                await delay(100)
                 sceneItemTransform = await _sceneItem.getSceneItemTransform(networks, path.split('/'))
                 sceneItemTransform.cropTop.should.be.equal(0)
             })
 
-            it('should be able to set transform info of a scene item in current scene', async function () {
+            it('should be able to set transform info of a scene item in current scene (+200 ms delay)', async function () {
                 const path = 'Readme'
                 await _sceneItem.setSceneItemTransform(networks, path.split('/'), 'cropTop', 100)
+                await delay(100)
                 let sceneItemTransform = await _sceneItem.getSceneItemTransform(networks, path.split('/'))
                 sceneItemTransform.cropTop.should.be.equal(100)
                 await _sceneItem.setSceneItemTransform(networks, path.split('/'), 'cropTop', 0)
+                await delay(100)
                 sceneItemTransform = await _sceneItem.getSceneItemTransform(networks, path.split('/'))
                 sceneItemTransform.cropTop.should.be.equal(0)
             })
@@ -863,22 +880,26 @@ describe('OBSOSC modules', function () {
         })
 
         describe('setSceneItemEnabled', function () {
-            it('should able to set enable state of a scene item in specified scene', async function () {
+            it('should able to set enable state of a scene item in specified scene (+200 ms delay)', async function () {
                 const path = 'Test Scene 3/Audio Input Capture'
                 await _sceneItem.setSceneItemEnabled(networks, path.split('/'), 0)
+                await delay(100)
                 let sceneItemEnabled = await _sceneItem.getSceneItemEnabled(networks, path.split('/'))
                 sceneItemEnabled.should.be.false
                 await _sceneItem.setSceneItemEnabled(networks, path.split('/'), 1)
+                await delay(100)
                 sceneItemEnabled = await _sceneItem.getSceneItemEnabled(networks, path.split('/'))
                 sceneItemEnabled.should.be.true
             })
 
-            it('should able to set enable state of a scene item in specified scene', async function () {
+            it('should able to set enable state of a scene item in specified scene (+200 ms delay)', async function () {
                 const path = 'Scene Label 1'
                 await _sceneItem.setSceneItemEnabled(networks, path.split('/'), 0)
+                await delay(100)
                 let sceneItemEnabled = await _sceneItem.getSceneItemEnabled(networks, path.split('/'))
                 sceneItemEnabled.should.be.false
                 await _sceneItem.setSceneItemEnabled(networks, path.split('/'), 1)
+                await delay(100)
                 sceneItemEnabled = await _sceneItem.getSceneItemEnabled(networks, path.split('/'))
                 sceneItemEnabled.should.be.true
             })
@@ -972,15 +993,17 @@ describe('OBSOSC modules', function () {
         })
 
         describe('setSourceFilterSettings', function () {
-            it('should able to set settings for a filter of a source', async function () {
+            it('should able to set settings for a filter of a source (+300 ms delay)', async function () {
                 const settings = { release_time: 75 }
                 await _source.setSourceFilterSettings(networks, 'Browser', 'Limiter', settings)
+                await delay(100)
                 let filterSettings = await _source.getSourceFilterSettings(networks, 'Browser', 'Limiter')
                 filterSettings.release_time.should.be.equal(75)
                 filterSettings.threshold.should.be.equal(-6)
 
                 settings.threshold = -8
                 await _source.setSourceFilterSettings(networks, 'Browser', 'Limiter', settings)
+                await delay(100)
                 filterSettings = await _source.getSourceFilterSettings(networks, 'Browser', 'Limiter')
                 filterSettings.release_time.should.be.equal(75)
                 filterSettings.threshold.should.be.equal(-8)
@@ -988,6 +1011,7 @@ describe('OBSOSC modules', function () {
                 settings.release_time = 60
                 settings.threshold = -6
                 await _source.setSourceFilterSettings(networks, 'Browser', 'Limiter', settings)
+                await delay(100)
                 filterSettings = await _source.getSourceFilterSettings(networks, 'Browser', 'Limiter')
                 filterSettings.release_time.should.be.equal(60)
                 filterSettings.threshold.should.be.equal(-6)
@@ -1018,12 +1042,14 @@ describe('OBSOSC modules', function () {
         })
 
         describe('setSourceFilterSetting', function () {
-            it('able to set a setting for a filter of a source', async function () {
+            it('able to set a setting for a filter of a source (+100 ms delay)', async function () {
                 const settingPath = 'saturation'
                 await _source.setSourceFilterSetting(networks, 'Browser', 'Color Correction', settingPath.split('/'), -1)
+                await delay(100)
                 let settingValue = await _source.getSourceFilterSetting(networks, 'Browser', 'Color Correction', settingPath.split('/'))
                 settingValue.should.be.equal(-1)
                 await _source.setSourceFilterSetting(networks, 'Browser', 'Color Correction', settingPath.split('/'), 2.57)
+                await delay(100)
                 settingValue = await _source.getSourceFilterSetting(networks, 'Browser', 'Color Correction', settingPath.split('/'))
                 settingValue.should.be.equal(2.57)
             })
@@ -1071,12 +1097,14 @@ describe('OBSOSC modules', function () {
         })
 
         describe('setSourceFilterEnabled', function () {
-            it('should be able to set enable state for a filter of a source', async function () {
+            it('should be able to set enable state for a filter of a source (+200 ms delay)', async function () {
                 await _source.setSourceFilterEnabled(networks, 'Browser', 'Color Correction', 0)
+                await delay(100)
                 let filterEnabled = await _source.getSourceFilterEnabled(networks, 'Browser', 'Color Correction')
                 filterEnabled.should.be.false
 
                 await _source.setSourceFilterEnabled(networks, 'Browser', 'Color Correction', 1)
+                await delay(100)
                 filterEnabled = await _source.getSourceFilterEnabled(networks, 'Browser', 'Color Correction')
                 filterEnabled.should.be.true
             })
@@ -1095,7 +1123,7 @@ describe('OBSOSC modules', function () {
             })
         })
 
-        describe('startOutput', function () {
+        describe('startStream', function () {
             it.skip('should able to start streaming (do not test this)', async function () {
                 this.timeout(5000)
                 await _streaming.startStream(networks)
@@ -1105,7 +1133,7 @@ describe('OBSOSC modules', function () {
             })
         })
 
-        describe('stopOutput', function () {
+        describe('stopStream', function () {
             it.skip('should able to stop streaming (do not test this)', async function () {
                 this.timeout(5000)
                 await _streaming.stopStream(networks)
@@ -1115,7 +1143,7 @@ describe('OBSOSC modules', function () {
             })
         })
 
-        describe('toggleOutput', function () {
+        describe('toggleStream', function () {
             it.skip('should able to start/stop streaming (do not test this)', async function () {
                 this.timeout(5000)
                 await _streaming.toggleStream(networks)
@@ -1223,7 +1251,7 @@ describe('OBSOSC modules', function () {
             })
         })
 
-        describe('getStudioModeEnabled', function () {
+        describe('transitionToProgram', function () {
             // Note: currentPreviewSceneName only changes when transition is done
             this.timeout(2000)
             before('enable studio mode', async function () {
@@ -1268,7 +1296,7 @@ describe('OBSOSC modules', function () {
             })
         })
 
-        describe('getStudioModeEnabled', function () {
+        describe('triggerStudioModeTransition', function () {
             before('enable studio mode', async function () {
                 await _studio.setStudioModeEnabled(networks, 1)
                 await delay(100)
@@ -1466,7 +1494,7 @@ describe('OBSOSC modules', function () {
             })
         })
 
-        describe('stopOutput', function () {
+        describe('stopVirtualCam', function () {
             it('should able to stop virtual camera (+100 ms delay)', async function () {
                 await _virtualCam.stopVirtualCam(networks)
                 await delay(100)
