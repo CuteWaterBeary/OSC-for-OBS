@@ -34,15 +34,19 @@ async function processStreaming(networks, path, args) {
     }
 }
 
-async function getStreamStatus(networks) {
+async function getStreamStatus(networks, sendOSC = true) {
     const streamPath = '/streaming'
     try {
         const { outputActive } = await networks.obs.call('GetStreamStatus')
-        try {
-            networks.oscOut.send(streamPath, outputActive ? 1 : 0)
-        } catch (e) {
-            if (DEBUG) console.error('getStreamStatus -- Failed to send streaming status:', e)
+        if (sendOSC) {
+            try {
+                networks.oscOut.send(streamPath, outputActive ? 1 : 0)
+            } catch (e) {
+                if (DEBUG) console.error('getStreamStatus -- Failed to send streaming status:', e)
+            }
         }
+        
+        return outputActive
     } catch (e) {
         if (DEBUG) console.error('getStreamStatus -- Failed to get streaming status:', e)
     }

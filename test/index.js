@@ -13,6 +13,7 @@ const _scene = require('../src/obsosc/scene')
 const _sceneCollection = require('../src/obsosc/sceneCollection')
 const _sceneItem = require('../src/obsosc/sceneItem')
 const _source = require('../src/obsosc/source')
+const _streaming = require('../src/obsosc/streaming')
 
 const { parseSettingsPath, mergeSettings } = require('../src/obsosc/utils')
 
@@ -1069,6 +1070,63 @@ describe('OBSOSC modules', function () {
                 await _source.setSourceFilterEnabled(networks, 'Browser', 'Color Correction', 1)
                 filterEnabled = await _source.getSourceFilterEnabled(networks, 'Browser', 'Color Correction')
                 filterEnabled.should.be.true
+            })
+        })
+    })
+
+    describe('Streaming', function () {
+        describe('getStreamStatus', function () {
+            it('should get current status of an output', async function () {
+                const outputActive = await _streaming.getStreamStatus(networks)
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('/streaming', 'Wrong OSC address')
+                output.data.should.be.a('number', 'Wrong OSC output type').and.oneOf([0, 1], 'Wrong OSC output data')
+                outputActive.should.be.a('boolean')
+            })
+        })
+
+        describe('startOutput', function () {
+            it.skip('should able to start streaming (do not test this)', async function () {
+                this.timeout(5000)
+                await _streaming.startStream(networks)
+                await delay(1000)
+                const outputActive = await _streaming.getStreamStatus(networks)
+                outputActive.should.be.true
+            })
+        })
+        
+        describe('stopOutput', function () {
+            it.skip('should able to stop streaming (do not test this)', async function () {
+                this.timeout(5000)
+                await _streaming.stopStream(networks)
+                await delay(1000)
+                const outputActive = await _streaming.getStreamStatus(networks)
+                outputActive.should.be.false
+            })
+        })
+        
+        describe('toggleOutput', function () {
+            it.skip('should able to start/stop streaming (do not test this)', async function () {
+                this.timeout(5000)
+                await _streaming.toggleStream(networks)
+                await delay(1000)
+                let outputActive = await _streaming.getStreamStatus(networks)
+                outputActive.should.be.true
+                await _streaming.toggleStream(networks)
+                await delay(1000)
+                outputActive = await _streaming.getStreamStatus(networks)
+                outputActive.should.be.false
+            })
+        })
+
+        describe('sendStreamingStateFeedback', function () {
+            it('should send current streaming state through OSC', async function() {
+                await _streaming.sendStreamingStateFeedback(networks, 1)
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('/streaming', 'Wrong OSC address')
+                output.data.should.be.equal(1, 'Wrong OSC output data')
             })
         })
     })
