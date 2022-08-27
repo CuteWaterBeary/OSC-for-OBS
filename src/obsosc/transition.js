@@ -39,15 +39,15 @@ async function processTransition(networks, path, args) {
 async function getCurrentSceneTransition(networks, sendOSC = true) {
     const currentTransitionPath = '/transition/current'
     try {
-        const { transitionName } = await networks.obs.call('GetCurrentSceneTransition')
+        const transition = await networks.obs.call('GetCurrentSceneTransition')
         if (sendOSC) {
             try {
-                networks.oscOut.send(currentTransitionPath, transitionName)
+                networks.oscOut.send(currentTransitionPath, transition.transitionName)
             } catch (e) {
                 if (DEBUG) console.error('getCurrentSceneTransition -- Failed to send current scene transition:', e)
             }
         }
-        return transitionName
+        return transition
     } catch (e) {
         if (DEBUG) console.error('getCurrentSceneTransition -- Failed to get current scene transition:', e)
     }
@@ -82,7 +82,12 @@ async function getSceneTransitionList(networks, sendOSC = true) {
 async function getCurrentSceneTransitionDuration(networks, sendOSC = true) {
     const currentTransitionDurationPath = '/transition/duration'
     try {
-        const { transitionDuration } = await networks.obs.call('GetCurrentSceneTransition')
+        let { transitionDuration } = await networks.obs.call('GetCurrentSceneTransition')
+        if (transitionDuration === null) {
+            // Transitions that has fixed duration
+            transitionDuration = -1
+        }
+
         if (sendOSC) {
             try {
                 networks.oscOut.send(currentTransitionDurationPath, transitionDuration)
@@ -90,7 +95,7 @@ async function getCurrentSceneTransitionDuration(networks, sendOSC = true) {
                 if (DEBUG) console.error('getCurrentSceneTransitionDuration -- Failed to send current scene transition:', e)
             }
         }
-        return transitionName
+        return transitionDuration
     } catch (e) {
         if (DEBUG) console.error('getCurrentSceneTransition -- Failed to get current scene transition:', e)
     }
@@ -105,17 +110,17 @@ async function setCurrentSceneTransitionDuration(networks, transitionDuration) {
 }
 
 async function getCurrentSceneTransitionCursor(networks, sendOSC = true) {
-    const currentTransitionCursor = '/transition/cursor'
+    const currentTransitionCursorPath = '/transition/cursor'
     try {
         const { transitionCursor } = await networks.obs.call('GetCurrentSceneTransitionCursor')
         if (sendOSC) {
             try {
-                networks.oscOut.send(currentTransitionCursor, transitionCursor)
+                networks.oscOut.send(currentTransitionCursorPath, transitionCursor)
             } catch (e) {
                 if (DEBUG) console.error('getCurrentSceneTransitionCursor -- Failed to send current scene transition cursor:', e)
             }
         }
-        return currentTransitionCursor
+        return transitionCursor
     } catch (e) {
         if (DEBUG) console.error('getCurrentSceneTransitionCursor -- Failed to get current scene transition cursor:', e)
     }

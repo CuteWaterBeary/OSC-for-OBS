@@ -15,6 +15,7 @@ const _sceneItem = require('../src/obsosc/sceneItem')
 const _source = require('../src/obsosc/source')
 const _streaming = require('../src/obsosc/streaming')
 const _studio = require('../src/obsosc/studio')
+const _transition = require('../src/obsosc/transition')
 
 const { parseSettingsPath, mergeSettings } = require('../src/obsosc/utils')
 
@@ -1165,7 +1166,7 @@ describe('OBSOSC modules', function () {
                 await delay(100)
                 let studioModeEnabled = await _studio.getStudioModeEnabled(networks)
                 studioModeEnabled.should.be.true
-                
+
                 await _studio.toggleStudioMode(networks)
                 await delay(100)
                 studioModeEnabled = await _studio.getStudioModeEnabled(networks)
@@ -1303,6 +1304,139 @@ describe('OBSOSC modules', function () {
             })
         })
 
+    })
+
+    describe('Transition', function () {
+        describe('getCurrentSceneTransition', function () {
+            it('should get current scene transition name in OBS UI (not transition override)', async function () {
+                const expectedKeys = [
+                    'transitionConfigurable',
+                    'transitionDuration',
+                    'transitionFixed',
+                    'transitionKind',
+                    'transitionName',
+                    'transitionSettings'
+                ]
+                const transition = await _transition.getCurrentSceneTransition(networks)
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('/transition/current', 'Wrong OSC address')
+                output.data.should.be.a('string', 'Wrong OSC output type').and.oneOf(['Fade', 'Cut'], 'Wrong OSC output data')
+                transition.should.be.an('object').that.has.keys(expectedKeys)
+            })
+        })
+
+        describe('setCurrentSceneTransition', function () {
+            it('should be able to set current scene transition name in OBS UI (not transition override) (+200 ms delay)', async function () {
+                await _transition.setCurrentSceneTransition(networks, 'Cut')
+                await delay(100)
+                let transition = await _transition.getCurrentSceneTransition(networks)
+                transition.transitionName.should.be.equal('Cut')
+
+                await _transition.setCurrentSceneTransition(networks, 'Fade')
+                await delay(100)
+                transition = await _transition.getCurrentSceneTransition(networks)
+                transition.transitionName.should.be.equal('Fade')
+            })
+        })
+
+        describe('getSceneTransitionList', function () {
+            it('should get a list of transitions', async function () {
+                const transitions = await _transition.getSceneTransitionList(networks)
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('/transition', 'Wrong OSC address')
+                output.data.should.be.an('Array', 'Wrong OSC output type').that.include.members(['Fade', 'Cut'], 'Wrong OSC output data')
+                transitions.should.be.an('Array').that.has.lengthOf(2)
+            })
+        })
+
+        describe('getCurrentSceneTransitionDuration', function () {
+            it('should get current scene transition duration in OBS UI (not transition override)', async function () {
+                await _transition.setCurrentSceneTransition(networks, 'Fade')
+                const transitionDuration = await _transition.getCurrentSceneTransitionDuration(networks)
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('/transition/duration', 'Wrong OSC address')
+                output.data.should.be.a('number', 'Wrong OSC outupt type').that.equal(transitionDuration, 'Wrong OSC output data').and.at.least(0)
+            })
+
+
+            it('should get -1 if scene transition duration in OBS UI is fixed', async function () {
+                await _transition.setCurrentSceneTransition(networks, 'Cut')
+                const transitionDuration = await _transition.getCurrentSceneTransitionDuration(networks)
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('/transition/duration', 'Wrong OSC address')
+                output.data.should.be.equal(transitionDuration, 'Wrong OSC output data').and.equal(-1)
+                await _transition.setCurrentSceneTransition(networks, 'Fade')
+            })
+        })
+
+        describe('setCurrentSceneTransitionDuration', function () {
+            before('set transition to Fade', async function() {
+                await _transition.setCurrentSceneTransition(networks, 'Fade')
+            })
+
+            it('should able to set current scene transition duration in OBS UI (not transition override) (+200 ms delay)', async function () {
+                await _transition.setCurrentSceneTransitionDuration(networks, 500)
+                await delay(100)
+                let transitionDuration = await _transition.getCurrentSceneTransitionDuration(networks)
+                transitionDuration.should.be.equal(500)
+                await _transition.setCurrentSceneTransitionDuration(networks, 1000)
+                await delay(100)
+                transitionDuration = await _transition.getCurrentSceneTransitionDuration(networks)
+                transitionDuration.should.be.equal(1000)
+            })
+        })
+
+        describe('getCurrentSceneTransitionCursor', function () {
+            it('should get 1 when not during transition', async function () {
+                const currentTransitionCursor = await _transition.getCurrentSceneTransitionCursor(networks)
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('/transition/cursor', 'Wrong OSC address')
+                output.data.should.be.equal(currentTransitionCursor, 'Wrong OSC output data').and.equal(1, 'Wrong OSC output data')
+            })
+
+            it('should get progress of transition between 0.0 to 1.0', async function () {
+                await _scene.setCurrentProgramScene(networks, 'Test Scene 3')
+                await delay(100)
+                const currentTransitionCursor = await _transition.getCurrentSceneTransitionCursor(networks)
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('/transition/cursor', 'Wrong OSC address')
+                output.data.should.be.equal(currentTransitionCursor, 'Wrong OSC output data').and.within(0, 1)
+                await _transition.setCurrentSceneTransition(networks, 'Cut')
+                await _scene.setCurrentProgramScene(networks, 'Test Scene 1')
+            })
+        })
+
+        describe('setTBarPosition', function () {
+            before('enable studio mode', async function () {
+                await _studio.setStudioModeEnabled(networks, 1)
+                await delay(100)
+                await _studio.setCurrentPreviewScene(networks, 'Test Scene 2')
+            })
+            
+            it('should able to set progress of transition between 0.0 to 1.0 in studio mode (+80ms delay)', async function () {
+                await _transition.setTBarPosition(networks, 0.5)
+                await delay(20)
+                await _transition.setTBarPosition(networks, 0.79)
+                await delay(20)
+                await _transition.setTBarPosition(networks, 0.3)
+                await delay(20)
+                await _transition.setTBarPosition(networks, 0.12)
+                await delay(20)
+                await _transition.setTBarPosition(networks, 1)
+            })
+
+            after('disable studio mode', async function () {
+                await _studio.setStudioModeEnabled(networks, 0)
+                await _transition.setCurrentSceneTransition(networks, 'Cut')
+                await _scene.setCurrentProgramScene(networks, 'Test Scene 1')
+            })
+        })
     })
 
     after(async function () {
