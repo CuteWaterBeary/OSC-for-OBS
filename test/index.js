@@ -91,6 +91,7 @@ describe('Config check', function () {
     })
 })
 
+// TODO: Include process*() later
 describe('OBSOSC modules', function () {
     before(async function () {
         const configJson = await loadJSON(testConfigPath)
