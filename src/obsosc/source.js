@@ -216,7 +216,7 @@ async function setSourceFilterSetting(networks, sourceName, filterName, settingP
 }
 
 async function getSourceFilter(networks, sourceName, filterName, sendOSC = true) {
-    const filterPath = `source/${sourceName}/filters/${filterName}`
+    const filterPath = `/source/${sourceName}/filters/${filterName}`
     try {
         const response = await networks.obs.call('GetSourceFilter', { sourceName, filterName })
         if (sendOSC) {
@@ -234,7 +234,7 @@ async function getSourceFilter(networks, sourceName, filterName, sendOSC = true)
 }
 
 async function getSourceFilterEnabled(networks, sourceName, filterName, sendOSC = true) {
-    const filterEnablePath = `source/${sourceName}/filters/${filterName}`
+    const filterEnablePath = `/source/${sourceName}/filters/${filterName}`
     const filter = await getSourceFilter(networks, sourceName, filterName, false)
     if (filter === undefined) return
 

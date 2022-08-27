@@ -367,7 +367,7 @@ describe('OBSOSC modules', function () {
                 const propertyItems = await _input.getInputPropertiesListPropertyItems(networks, 'Scene Label 1', 'transform')
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
-                output.address.should.be.equal('input/Scene Label 1/settings/transform/propertyItems', 'Wrong OSC address')
+                output.address.should.be.equal('/input/Scene Label 1/settings/transform/propertyItems', 'Wrong OSC address')
                 output.data.should.be.an('Array').that.has.members([0, 1, 2, 3])
                 propertyItems.should.be.lengthOf(4)
                 propertyItems[0].should.have.all.keys(['itemEnabled', 'itemName', 'itemValue'])
@@ -1033,13 +1033,13 @@ describe('OBSOSC modules', function () {
                 let response = await _source.getSourceFilter(networks, '測試文字', 'Scaling and Aspect Ratio')
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 let output = networks.oscOut.outputs[0]
-                output.address.should.be.equal('source/測試文字/filters/Scaling and Aspect Ratio', 'Wrong OSC address')
+                output.address.should.be.equal('/source/測試文字/filters/Scaling and Aspect Ratio', 'Wrong OSC address')
                 output.data.should.be.equal(0, 'Wrong OSC output data')
                 response.should.be.an('object').that.has.keys(expectedKeys)
 
                 response = await _source.getSourceFilter(networks, '測試文字', 'Chroma Key')
                 output = networks.oscOut.outputs[1]
-                output.address.should.be.equal('source/測試文字/filters/Chroma Key', 'Wrong OSC address')
+                output.address.should.be.equal('/source/測試文字/filters/Chroma Key', 'Wrong OSC address')
                 output.data.should.be.equal(1, 'Wrong OSC output data')
             })
         })
@@ -1050,13 +1050,13 @@ describe('OBSOSC modules', function () {
 
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 let output = networks.oscOut.outputs[0]
-                output.address.should.be.equal('source/測試文字/filters/Scaling and Aspect Ratio', 'Wrong OSC address')
+                output.address.should.be.equal('/source/測試文字/filters/Scaling and Aspect Ratio', 'Wrong OSC address')
                 output.data.should.be.equal(0, 'Wrong OSC output data')
                 filterEnabled.should.be.false
 
                 filterEnabled = await _source.getSourceFilterEnabled(networks, '測試文字', 'Chroma Key')
                 output = networks.oscOut.outputs[1]
-                output.address.should.be.equal('source/測試文字/filters/Chroma Key', 'Wrong OSC address')
+                output.address.should.be.equal('/source/測試文字/filters/Chroma Key', 'Wrong OSC address')
                 output.data.should.be.equal(1, 'Wrong OSC output data')
                 filterEnabled.should.be.true
             })

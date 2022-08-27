@@ -35,10 +35,11 @@ async function processVirtualCam(networks, path, args) {
 }
 
 async function getVirtualCamStatus(networks) {
+    const virtualCamPath = `/virtualCam`
     try {
         const { outputActive } = await networks.obs.call('GetVirtualCamStatus')
         try {
-            networks.oscOut.send('/virtualCam', outputActive ? 0 : 1)
+            networks.oscOut.send(virtualCamPath, outputActive ? 0 : 1)
         } catch (e) {
             if (DEBUG) console.error('getVirtualCamStatus -- Failed to send virtual camera status:', e)
         }

@@ -183,7 +183,7 @@ async function getInputDefaultSetting(networks, inputName, settingPath) {
 }
 
 async function getInputPropertiesListPropertyItems(networks, inputName, propertyName, sendOSC = true) {
-    const inputPropertyItemsPath = `input/${inputName}/settings/${propertyName}/propertyItems`
+    const inputPropertyItemsPath = `/input/${inputName}/settings/${propertyName}/propertyItems`
     try {
         const { propertyItems } = await networks.obs.call('GetInputPropertiesListPropertyItems', { inputName, propertyName })
         if (sendOSC) {
