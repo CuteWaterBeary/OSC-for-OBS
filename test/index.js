@@ -14,6 +14,7 @@ const _sceneCollection = require('../src/obsosc/sceneCollection')
 const _sceneItem = require('../src/obsosc/sceneItem')
 const _source = require('../src/obsosc/source')
 const _streaming = require('../src/obsosc/streaming')
+const _studio = require('../src/obsosc/studio')
 
 const { parseSettingsPath, mergeSettings } = require('../src/obsosc/utils')
 
@@ -1095,7 +1096,7 @@ describe('OBSOSC modules', function () {
                 outputActive.should.be.true
             })
         })
-        
+
         describe('stopOutput', function () {
             it.skip('should able to stop streaming (do not test this)', async function () {
                 this.timeout(5000)
@@ -1105,7 +1106,7 @@ describe('OBSOSC modules', function () {
                 outputActive.should.be.false
             })
         })
-        
+
         describe('toggleOutput', function () {
             it.skip('should able to start/stop streaming (do not test this)', async function () {
                 this.timeout(5000)
@@ -1121,7 +1122,7 @@ describe('OBSOSC modules', function () {
         })
 
         describe('sendStreamingStateFeedback', function () {
-            it('should send current streaming state through OSC', async function() {
+            it('should send current streaming state through OSC', async function () {
                 await _streaming.sendStreamingStateFeedback(networks, 1)
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
                 const output = networks.oscOut.outputs[0]
@@ -1129,6 +1130,179 @@ describe('OBSOSC modules', function () {
                 output.data.should.be.equal(1, 'Wrong OSC output data')
             })
         })
+    })
+
+    describe('Studio', function () {
+        describe('getStudioModeEnabled', function () {
+            it('should get enable state of studio mode', async function () {
+                const studioModeEnabled = await _studio.getStudioModeEnabled(networks)
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('/studio', 'Wrong OSC address')
+                output.data.should.be.a('number', 'Wrong OSC output type').and.oneOf([0, 1], 'Wrong OSC output data')
+                studioModeEnabled.should.be.a('boolean')
+            })
+        })
+
+        describe('setStudioModeEnabled', function () {
+            it('should be able to set enable state of studio mode (+200 ms delay)', async function () {
+                await _studio.setStudioModeEnabled(networks, 1)
+                await delay(100)
+                let studioModeEnabled = await _studio.getStudioModeEnabled(networks)
+                studioModeEnabled.should.be.true
+                studioModeEnabled.should.be.true
+
+                await _studio.setStudioModeEnabled(networks, 0)
+                await delay(100)
+                studioModeEnabled = await _studio.getStudioModeEnabled(networks)
+                studioModeEnabled.should.be.false
+            })
+        })
+
+        describe('toggleStudioMode', function () {
+            it('should be able to enable/disable studio mode (+200 ms delay)', async function () {
+                await _studio.toggleStudioMode(networks)
+                await delay(100)
+                let studioModeEnabled = await _studio.getStudioModeEnabled(networks)
+                studioModeEnabled.should.be.true
+                
+                await _studio.toggleStudioMode(networks)
+                await delay(100)
+                studioModeEnabled = await _studio.getStudioModeEnabled(networks)
+                studioModeEnabled.should.be.false
+            })
+        })
+
+        describe('getCurrentPreviewScene', function () {
+            it('should fail to get current preview scene when studio mode is disabled', async function () {
+                const currentPreviewSceneName = await _studio.getCurrentPreviewScene(networks)
+                networks.oscOut.outputs.should.have.lengthOf(0, `Too ${networks.oscOut.outputs.length < 0 ? 'little' : 'many'} OSC output`)
+                should.not.exist(currentPreviewSceneName)
+            })
+
+            it('should get current preview scene when studio mode is enabled (+100 ms delay)', async function () {
+                await _studio.setStudioModeEnabled(networks, 1)
+                await delay(100)
+                const currentPreviewSceneName = await _studio.getCurrentPreviewScene(networks)
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('/studio/preview', 'Wrong OSC address')
+                output.data.should.be.equal(currentPreviewSceneName, 'Wrong OSC output data').and.equal('Test Scene 1', 'Wrong OSC output data')
+                await _studio.setStudioModeEnabled(networks, 0)
+            })
+        })
+
+        describe('setCurrentPreviewScene', function () {
+            before('enable studio mode', async function () {
+                await _studio.setStudioModeEnabled(networks, 1)
+                await delay(100)
+            })
+
+            it('should able to set current preview scene (+200 ms delay)', async function () {
+                await _studio.setCurrentPreviewScene(networks, 'Test Scene 2')
+                await delay(100)
+                let currentPreviewSceneName = await _studio.getCurrentPreviewScene(networks)
+                currentPreviewSceneName.should.be.equal('Test Scene 2')
+
+                await _studio.setCurrentPreviewScene(networks, 'Test Scene 1')
+                await delay(100)
+                currentPreviewSceneName = await _studio.getCurrentPreviewScene(networks)
+                currentPreviewSceneName.should.be.equal('Test Scene 1')
+            })
+
+            after('disable studio mode', async function () {
+                await _studio.setStudioModeEnabled(networks, 0)
+            })
+        })
+
+        describe('getStudioModeEnabled', function () {
+            // Note: currentPreviewSceneName only changes when transition is done
+            this.timeout(2000)
+            before('enable studio mode', async function () {
+                await _studio.setStudioModeEnabled(networks, 1)
+                await delay(100)
+                await _studio.setCurrentPreviewScene(networks, 'Test Scene 3')
+            })
+
+            it('should able to trigger transition in studio mode (+350 ms delay)', async function () {
+                await _studio.transitionToProgram(networks, [1])
+                await delay(100)
+                let currentPreviewSceneName = await _studio.getCurrentPreviewScene(networks)
+                currentPreviewSceneName.should.be.equal('Test Scene 3')
+                await delay(250)
+                currentPreviewSceneName = await _studio.getCurrentPreviewScene(networks)
+                currentPreviewSceneName.should.be.equal('Test Scene 1')
+            })
+
+            it('should able to trigger transition to specified transition name in studio mode (+450 ms delay)', async function () {
+                await _studio.setCurrentPreviewScene(networks, 'Test Scene 2')
+                await delay(100)
+                await _studio.transitionToProgram(networks, ['Fade'])
+                await delay(350)
+                const currentPreviewSceneName = await _studio.getCurrentPreviewScene(networks)
+                currentPreviewSceneName.should.be.equal('Test Scene 3')
+            })
+
+            it('should able to trigger transition to specified transition name with set duration in studio mode (+1150 ms delay)', async function () {
+                await _studio.setCurrentPreviewScene(networks, 'Test Scene 1')
+                await delay(100)
+                await _studio.transitionToProgram(networks, ['Fade', 1000])
+                await delay(500)
+                let currentPreviewSceneName = await _studio.getCurrentPreviewScene(networks)
+                currentPreviewSceneName.should.be.equal('Test Scene 1')
+                await delay(550)
+                currentPreviewSceneName = await _studio.getCurrentPreviewScene(networks)
+                currentPreviewSceneName.should.be.equal('Test Scene 2')
+            })
+
+            after('disable studio mode', async function () {
+                await _studio.setStudioModeEnabled(networks, 0)
+            })
+        })
+
+        describe('getStudioModeEnabled', function () {
+            before('enable studio mode', async function () {
+                await _studio.setStudioModeEnabled(networks, 1)
+                await delay(100)
+                await _studio.setCurrentPreviewScene(networks, 'Test Scene 2')
+            })
+
+            it('should get enable state of studio mode (+100 ms delay)', async function () {
+                await _studio.triggerStudioModeTransition(networks)
+                await delay(50)
+                let currentPreviewSceneName = await _studio.getCurrentPreviewScene(networks)
+                currentPreviewSceneName.should.be.equal('Test Scene 1')
+                await _studio.transitionToProgram(networks, ['Cut'])
+                await delay(50)
+                currentPreviewSceneName = await _studio.getCurrentPreviewScene(networks)
+                currentPreviewSceneName.should.be.equal('Test Scene 2')
+            })
+
+            after('disable studio mode', async function () {
+                await _studio.setStudioModeEnabled(networks, 0)
+            })
+        })
+
+        describe('sendStudioModeStateFeedback', function () {
+            it('should send enable state of studio mode through OSC', async function () {
+                await _studio.sendStudioModeStateFeedback(networks, true)
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('/studio', 'Wrong OSC address')
+                output.data.should.be.equal(1, 'Wrong OSC output data')
+            })
+        })
+
+        describe('sendStudioPreviewSceneFeedback', function () {
+            it('should send current preview scene name through OSC', async function () {
+                await _studio.sendStudioPreviewSceneFeedback(networks, 'Test Scene 2')
+                networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
+                const output = networks.oscOut.outputs[0]
+                output.address.should.be.equal('/studio/preview', 'Wrong OSC address')
+                output.data.should.be.equal('Test Scene 2', 'Wrong OSC output data')
+            })
+        })
+
     })
 
     after(async function () {

@@ -66,18 +66,23 @@ async function setStudioModeEnabled(networks, state) {
 
 async function toggleStudioMode(networks) {
     const studioModeEnabled = await getStudioModeEnabled(networks, false)
-    getStudioModeEnabled(networks, !studioModeEnabled)
+    setStudioModeEnabled(networks, !studioModeEnabled)
 }
 
-async function getCurrentPreviewScene(networks) {
+async function getCurrentPreviewScene(networks, sendOSC = true) {
     const studioPreviewScenePath = '/studio/preview'
     try {
         const { currentPreviewSceneName } = await networks.obs.call('GetCurrentPreviewScene')
-        try {
-            networks.oscOut.send(studioPreviewScenePath, currentPreviewSceneName)
-        } catch (e) {
-            if (DEBUG) console.error('getCurrentPreviewScene -- Failed to send preview scene:', e)
+
+        if (sendOSC) {
+            try {
+                networks.oscOut.send(studioPreviewScenePath, currentPreviewSceneName)
+            } catch (e) {
+                if (DEBUG) console.error('getCurrentPreviewScene -- Failed to send preview scene:', e)
+            }
         }
+
+        return currentPreviewSceneName
     } catch (e) {
         if (DEBUG) console.error('getCurrentPreviewScene -- Failed to get preview scene:', e)
     }
