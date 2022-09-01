@@ -392,7 +392,7 @@ describe('OBSOSC modules', function () {
 
     })
 
-    describe('Output', function () {
+    describe.skip('Output', function () {
         describe('getOutputList', function () {
             it('should get a list of outputs', async function () {
                 const outputs = await _output.getOutputList(networks)
@@ -418,33 +418,53 @@ describe('OBSOSC modules', function () {
         })
 
         describe('startOutput', function () {
-            it('should able to start an output', async function () {
+            before('add delay', async function () {
+                await delay(1000)
+            })
+
+            it('should able to start an output (+1000 ms delay)', async function () {
                 await _output.startOutput(networks, 'virtualcam_output')
-                await delay(100)
+                await delay(1000)
                 outputActive = await _output.getOutputStatus(networks, 'virtualcam_output')
                 outputActive.should.be.true
             })
         })
 
         describe('stopOutput', function () {
-            it('should able to stop an output', async function () {
+            before('add delay', async function () {
+                await delay(1000)
+            })
+
+            it('should able to stop an output (+1000 ms delay)', async function () {
                 await _output.stopOutput(networks, 'virtualcam_output')
-                await delay(100)
+                await delay(1000)
                 outputActive = await _output.getOutputStatus(networks, 'virtualcam_output')
                 outputActive.should.be.false
             })
         })
 
         describe('toggleOutput', function () {
-            it('should able to start/stop an output (+100 ms waiting for status change)', async function () {
+            before('add delay', async function () {
+                await delay(1000)
+            })
+
+            it('should able to start/stop an output (+2000 ms delay)', async function () {
                 await _output.toggleOutput(networks, 'virtualcam_output')
+                await delay(1000)
                 let outputActive = await _output.getOutputStatus(networks, 'virtualcam_output')
                 outputActive.should.be.true
                 await _output.toggleOutput(networks, 'virtualcam_output')
-                await delay(100)
+                await delay(1000)
                 outputActive = await _output.getOutputStatus(networks, 'virtualcam_output')
                 outputActive.should.be.false
             })
+        })
+
+        after('stop output', async function () {
+            const outputActive = await _output.getOutputStatus(networks, 'virtualcam_output')
+            if (outputActive) {
+                await _output.stopOutput(networks, 'virtualcam_output')
+            }
         })
     })
 
@@ -1259,6 +1279,7 @@ describe('OBSOSC modules', function () {
                 await _studio.setStudioModeEnabled(networks, 1)
                 await delay(100)
                 await _studio.setCurrentPreviewScene(networks, 'Test Scene 3')
+                await delay(100)
             })
 
             it('should able to trigger transition in studio mode (+350 ms delay)', async function () {
@@ -1299,18 +1320,19 @@ describe('OBSOSC modules', function () {
 
         describe('triggerStudioModeTransition', function () {
             before('enable studio mode', async function () {
+                await delay(500)
                 await _studio.setStudioModeEnabled(networks, 1)
-                await delay(100)
+                await delay(500)
                 await _studio.setCurrentPreviewScene(networks, 'Test Scene 2')
             })
 
-            it('should get enable state of studio mode (+100 ms delay)', async function () {
+            it('should get enable state of studio mode (+200 ms delay)', async function () {
                 await _studio.triggerStudioModeTransition(networks)
-                await delay(50)
+                await delay(100)
                 let currentPreviewSceneName = await _studio.getCurrentPreviewScene(networks)
                 currentPreviewSceneName.should.be.equal('Test Scene 1')
                 await _studio.transitionToProgram(networks, ['Cut'])
-                await delay(50)
+                await delay(100)
                 currentPreviewSceneName = await _studio.getCurrentPreviewScene(networks)
                 currentPreviewSceneName.should.be.equal('Test Scene 2')
             })
@@ -1409,7 +1431,7 @@ describe('OBSOSC modules', function () {
         })
 
         describe('setCurrentSceneTransitionDuration', function () {
-            before('set transition to Fade', async function() {
+            before('set transition to Fade', async function () {
                 await _transition.setCurrentSceneTransition(networks, 'Fade')
             })
 
@@ -1426,6 +1448,10 @@ describe('OBSOSC modules', function () {
         })
 
         describe('getCurrentSceneTransitionCursor', function () {
+            before('add delay', async function () {
+                await delay(1000)
+            })
+
             it('should get 1 when not during transition', async function () {
                 const currentTransitionCursor = await _transition.getCurrentSceneTransitionCursor(networks)
                 networks.oscOut.outputs.should.have.lengthOf(1, `Too ${networks.oscOut.outputs.length < 1 ? 'little' : 'many'} OSC output`)
@@ -1453,7 +1479,7 @@ describe('OBSOSC modules', function () {
                 await delay(100)
                 await _studio.setCurrentPreviewScene(networks, 'Test Scene 2')
             })
-            
+
             it('should able to set progress of transition between 0.0 to 1.0 in studio mode (+80ms delay)', async function () {
                 await _transition.setTBarPosition(networks, 0.5)
                 await delay(20)
@@ -1473,8 +1499,8 @@ describe('OBSOSC modules', function () {
             })
         })
     })
-    
-    describe('Virtual Camera', function () {
+
+    describe.skip('Virtual Camera', function () {
         describe('getVirtualCamStatus', function () {
             it('should get current status of virtual camera', async function () {
                 const outputActive = await _virtualCam.getVirtualCamStatus(networks)
@@ -1487,32 +1513,32 @@ describe('OBSOSC modules', function () {
         })
 
         describe('startVirtualCam', function () {
-            it('should able to start virtual camera (+100 ms delay)', async function () {
+            it('should able to start virtual camera (+500 ms delay)', async function () {
                 await _virtualCam.startVirtualCam(networks)
-                await delay(100)
+                await delay(500)
                 const outputActive = await _virtualCam.getVirtualCamStatus(networks)
                 outputActive.should.be.true
             })
         })
 
         describe('stopVirtualCam', function () {
-            it('should able to stop virtual camera (+100 ms delay)', async function () {
+            it('should able to stop virtual camera (+500 ms delay)', async function () {
                 await _virtualCam.stopVirtualCam(networks)
-                await delay(100)
+                await delay(500)
                 const outputActive = await _virtualCam.getVirtualCamStatus(networks)
                 outputActive.should.be.false
             })
         })
 
         describe('toggleVirtualCam', function () {
-            it('should able to start/stop virtual camera (+200 ms delay)', async function () {
+            it('should able to start/stop virtual camera (+1000 ms delay)', async function () {
                 await _virtualCam.toggleVirtualCam(networks)
-                await delay(100)
+                await delay(500)
                 let outputActive = await _virtualCam.getVirtualCamStatus(networks)
                 outputActive.should.be.true
                 await _virtualCam.toggleVirtualCam(networks)
-                await delay(100)
-                outputActive =  await _virtualCam.getVirtualCamStatus(networks)
+                await delay(500)
+                outputActive = await _virtualCam.getVirtualCamStatus(networks)
                 outputActive.should.be.false
             })
         })

@@ -9,6 +9,7 @@
     "start": "electron . --enable-log",
     "build-win32": "electron-packager . OSC-for-OBS --platform=win32 --arch=ia32 --ignore=config.json --out=release --overwrite",
     "build-win64": "electron-packager . OSC-for-OBS --platform=win32 --arch=x64 --ignore=config.json --out=release --overwrite",
+    "build-linux64": "electron-packager . OSC-for-OBS --platform=linux --arch=x64 --ignore=config.json --out=release --overwrite",
     "build-darwin": "electron-packager . OSC-for-OBS --platform=darwin --arch=universal --ignore=config.json --out=release --overwrite"
   },
   "author": {
