@@ -1,9 +1,15 @@
-module.exports = { mergeSettings, parseSettingsPath }
+const TEST = process.argv.includes('--unit-test')
+
+if (TEST) {
+    module.exports = { mergeSettings, parseSettingsPath }
+} else {
+    module.exports = { mergeSettings, parseSettingsPath }
+}
 
 function mergeSettings(defaultSettings, currentSettings) {
     for (setting in currentSettings) {
-        if (typeof (currentSettings[setting]) === 'object' && defaultSettings[setting]) {
-            mergeSettings(currentSettings[setting], defaultSettings[setting])
+        if (typeof (currentSettings[setting]) === 'object') {
+            mergeSettings(defaultSettings[setting], currentSettings[setting])
         } else {
             defaultSettings[setting] = currentSettings[setting]
         }

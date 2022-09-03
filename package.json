@@ -5,9 +5,11 @@
   "description": "Control OBS via OSC, a forked and heavily modified version from jshea2/OSC-for-OBS",
   "main": "src/index.js",
   "scripts": {
+    "test": "mocha --reporter=spec --unit-test",
     "start": "electron . --enable-log",
     "build-win32": "electron-packager . OSC-for-OBS --platform=win32 --arch=ia32 --ignore=config.json --out=release --overwrite",
     "build-win64": "electron-packager . OSC-for-OBS --platform=win32 --arch=x64 --ignore=config.json --out=release --overwrite",
+    "build-linux64": "electron-packager . OSC-for-OBS --platform=linux --arch=x64 --ignore=config.json --out=release --overwrite",
     "build-darwin": "electron-packager . OSC-for-OBS --platform=darwin --arch=universal --ignore=config.json --out=release --overwrite"
   },
   "author": {
@@ -22,8 +24,10 @@
   ],
   "license": "MIT",
   "devDependencies": {
+    "chai": "^4.3.6",
     "electron": "^19.0.4",
-    "electron-packager": "^15.5.1"
+    "electron-packager": "^15.5.1",
+    "mocha": "^10.0.0"
   },
   "dependencies": {
     "node-osc": "^8.0.3",

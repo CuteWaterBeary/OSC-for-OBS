@@ -1,6 +1,11 @@
-module.exports = { processRecording, sendRecordingStateFeedback, sendRecordingPauseStateFeedback }
-
 const DEBUG = process.argv.includes('--enable-log')
+const TEST = process.argv.includes('--unit-test')
+
+if (TEST) {
+    module.exports = { processRecording, getRecordStatus, startRecord, stopRecord, toggleRecord, pauseRecord, resumeRecord, toggleRecordPause, sendRecordingStateFeedback, sendRecordingPauseStateFeedback }
+} else {
+    module.exports = { processRecording, sendRecordingStateFeedback, sendRecordingPauseStateFeedback }
+}
 
 async function processRecording(networks, path, args) {
     if (path[0] === undefined) {
@@ -39,17 +44,21 @@ async function processRecording(networks, path, args) {
     }
 }
 
-async function getRecordStatus(networks) {
+async function getRecordStatus(networks, sendOSC = true) {
     const recordPath = '/recording'
     const recordPausePath = `/recording/pause`
     try {
-        const { outputActive, ouputPaused } = await networks.obs.call('GetRecordStatus')
-        try {
-            networks.oscOut.send(recordPath, outputActive ? 1 : 0)
-            networks.oscOut.send(recordPausePath, ouputPaused ? 1 : 0)
-        } catch (e) {
-            if (DEBUG) console.error('getRecordStatus -- Failed to send recording status:', e)
+        const { outputActive, outputPaused } = await networks.obs.call('GetRecordStatus')
+        if (sendOSC) {
+            try {
+                networks.oscOut.send(recordPath, outputActive ? 1 : 0)
+                networks.oscOut.send(recordPausePath, outputPaused ? 1 : 0)
+            } catch (e) {
+                if (DEBUG) console.error('getRecordStatus -- Failed to send recording status:', e)
+            }
         }
+
+        return { outputActive, outputPaused }
     } catch (e) {
         if (DEBUG) console.error('getRecordStatus -- Failed to get recording status:', e)
     }
@@ -106,7 +115,7 @@ async function toggleRecordPause(networks) {
 function sendRecordingStateFeedback(networks, state) {
     const recordingPath = `/recording`
     try {
-        networks.oscOut.send(recordingPath, state)
+        networks.oscOut.send(recordingPath, state ? 1 : 0)
     } catch (e) {
         if (DEBUG) console.error(`sendRecordingStateFeedback -- Failed to send recording state feedback:`, e)
     }
@@ -115,7 +124,7 @@ function sendRecordingStateFeedback(networks, state) {
 function sendRecordingPauseStateFeedback(networks, state) {
     const recordPausePath = `/recording/pause`
     try {
-        networks.oscOut.send(recordPausePath, state)
+        networks.oscOut.send(recordPausePath, state ? 1 : 0)
     } catch (e) {
         if (DEBUG) console.error(`sendRecordingPauseStateFeedback -- Failed to send recording pause state feedback:`, e)
     }

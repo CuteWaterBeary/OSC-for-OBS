@@ -1,6 +1,11 @@
-module.exports = { processSceneCollection, sendCurrentSceneCollectionFeedback }
-
 const DEBUG = process.argv.includes('--enable-log')
+const TEST = process.argv.includes('--unit-test')
+
+if (TEST) {
+    module.exports = { processSceneCollection, getSceneCollectionList, getCurrentSceneCollection, setCurrentSceneCollection, sendCurrentSceneCollectionFeedback }
+} else {
+    module.exports = { processSceneCollection, sendCurrentSceneCollectionFeedback }
+}
 
 async function processSceneCollection(networks, path, args) {
     if (path[0] === undefined) {
@@ -29,8 +34,28 @@ async function getSceneCollectionList(networks, sendOSC = true) {
                 if (DEBUG) console.error('getSceneCollectionList -- Failed to send scene collection list', e)
             }
         }
+
+        return sceneCollections
     } catch (e) {
         if (DEBUG) console.error('getSceneCollectionList -- Failed to get scene collection list:', e)
+    }
+}
+
+async function getCurrentSceneCollection(networks, sendOSC = true) {
+    const currentSceneCollectionPath = '/sceneCollection/current'
+    try {
+        const { currentSceneCollectionName } = await networks.obs.call('GetSceneCollectionList')
+        if (sendOSC) {
+            try {
+                networks.oscOut.send(currentSceneCollectionPath, currentSceneCollectionName)
+            } catch (e) {
+                if (DEBUG) console.error('getCurrentSceneCollection -- Failed to send current scene collection:', e)
+            }
+        }
+
+        return currentSceneCollectionName
+    } catch (e) {
+        if (DEBUG) console.error('getCurrentSceneCollection -- Failed to get current scene collection:', e)
     }
 }
 
@@ -39,20 +64,6 @@ async function setCurrentSceneCollection(networks, sceneCollectionName) {
         await networks.obs.call('SetCurrentSceneCollection', { sceneCollectionName })
     } catch (e) {
         if (DEBUG) console.error('setSceneCollectionList -- Failed to set current scene collection:', e)
-    }
-}
-
-async function getCurrentSceneCollection(networks) {
-    const currentSceneCollectionPath = '/sceneCollection/current'
-    try {
-        const { sceneCollectionName } = await networks.obs.call('GetSceneCollectionList')
-        try {
-            networks.oscOut.send(currentSceneCollectionPath, sceneCollectionName)
-        } catch (e) {
-            if (DEBUG) console.error('getCurrentSceneCollection -- Failed to send current scene collection:', e)
-        }
-    } catch (e) {
-        if (DEBUG) console.error('getCurrentSceneCollection -- Failed to get current scene collection:', e)
     }
 }
 

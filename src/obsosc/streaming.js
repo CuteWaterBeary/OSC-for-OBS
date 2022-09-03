@@ -1,6 +1,11 @@
-module.exports = { processStreaming, sendStreamingStateFeedback }
-
 const DEBUG = process.argv.includes('--enable-log')
+const TEST = process.argv.includes('--unit-test')
+
+if (TEST) {
+    module.exports = { processStreaming, getStreamStatus, startStream, stopStream, toggleStream, sendStreamingStateFeedback }
+} else {
+    module.exports = { processStreaming, sendStreamingStateFeedback }
+}
 
 async function processStreaming(networks, path, args) {
     if (path[0] === undefined) {
@@ -29,24 +34,19 @@ async function processStreaming(networks, path, args) {
     }
 }
 
-function sendStreamingStateFeedback(networks, state) {
-    const streamingPath = `/streaming`
-    try {
-        networks.oscOut.send(streamingPath, state)
-    } catch (e) {
-        if (DEBUG) console.error(`sendStreamingStateFeedback -- Failed to send streaming state feedback:`, e)
-    }
-}
-
-async function getStreamStatus(networks) {
+async function getStreamStatus(networks, sendOSC = true) {
     const streamPath = '/streaming'
     try {
         const { outputActive } = await networks.obs.call('GetStreamStatus')
-        try {
-            networks.oscOut.send(streamPath, outputActive ? 1 : 0)
-        } catch (e) {
-            if (DEBUG) console.error('getStreamStatus -- Failed to send streaming status:', e)
+        if (sendOSC) {
+            try {
+                networks.oscOut.send(streamPath, outputActive ? 1 : 0)
+            } catch (e) {
+                if (DEBUG) console.error('getStreamStatus -- Failed to send streaming status:', e)
+            }
         }
+        
+        return outputActive
     } catch (e) {
         if (DEBUG) console.error('getStreamStatus -- Failed to get streaming status:', e)
     }
@@ -73,5 +73,14 @@ async function toggleStream(networks) {
         await networks.obs.call('ToggleStream')
     } catch (e) {
         if (DEBUG) console.error('toggleStream -- Failed to toggle streaming:', e)
+    }
+}
+
+function sendStreamingStateFeedback(networks, state) {
+    const streamingPath = `/streaming`
+    try {
+        networks.oscOut.send(streamingPath, state)
+    } catch (e) {
+        if (DEBUG) console.error(`sendStreamingStateFeedback -- Failed to send streaming state feedback:`, e)
     }
 }

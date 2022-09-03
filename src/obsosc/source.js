@@ -2,9 +2,14 @@ const { getSceneList } = require('./scene')
 const { getInputList } = require('./input')
 const { parseSettingsPath, mergeSettings } = require('./utils')
 
-module.exports = { processSource }
-
 const DEBUG = process.argv.includes('--enable-log')
+const TEST = process.argv.includes('--unit-test')
+
+if (TEST) {
+    module.exports = { processSource, processSourceFilter, getSourceList, getSourceActive, getSourceFilterList, getSourceFilterSettings, setSourceFilterSettings, getSourceFilterDefaultSettings, getSourceFilterSetting, setSourceFilterSetting, getSourceFilter, getSourceFilterEnabled, setSourceFilterEnabled }
+} else {
+    module.exports = { processSource }
+}
 
 async function processSource(networks, path, args) {
     if (path[0] === undefined) {
@@ -63,35 +68,43 @@ async function processSourceFilter(networks, sourceName, path, args) {
         } else {
             setSourceFilterSetting(networks, sourceName, path[0], path.slice(2), args[0])
         }
-    } else if (path[1] === 'reset') {
+    } else if (path[1] === 'reset' && args[0] === 1) {
         setSourceFilterSettings(networks, sourceName, path[0], {}, false)
         setSourceFilterEnabled(networks, sourceName, path[0], 1)
     }
 }
 
-async function getSourceList(networks) {
+async function getSourceList(networks, sendOSC = true) {
     const sourceListPath = '/source'
     const sceneList = await getSceneList(networks, false)
     const inputList = await getInputList(networks, false)
     if (sceneList === undefined || inputList === undefined) return
 
     const sourceList = [...sceneList.sort((a, b) => b.sceneIndex - a.sceneIndex).flatMap(scene => scene.sceneName), ...inputList.sort((a, b) => (a.inputName.toUpperCase() > b.inputName.toUpperCase()) ? 1 : -1).flatMap(input => input.inputName)]
-    try {
-        networks.oscOut.send(sourceListPath, sourceList)
-    } catch (e) {
-        if (DEBUG) console.error('getSourceList -- Failed to send source list:', e)
+    if (sendOSC) {
+        try {
+            networks.oscOut.send(sourceListPath, sourceList)
+        } catch (e) {
+            if (DEBUG) console.error('getSourceList -- Failed to send source list:', e)
+        }
     }
+
+    return sourceList
 }
 
-async function getSourceActive(networks, sourceName) {
+async function getSourceActive(networks, sourceName, sendOSC = true) {
     const sourceActivePath = `/source/${sourceName}`
     try {
         const { videoActive } = await networks.obs.call('GetSourceActive', { sourceName })
-        try {
-            networks.oscOut.send(sourceActivePath, videoActive ? 1 : 0)
-        } catch (e) {
-            if (DEBUG) console.error('getSourceActive -- Failed to send source active status:', e)
+        if (sendOSC) {
+            try {
+                networks.oscOut.send(sourceActivePath, videoActive ? 1 : 0)
+            } catch (e) {
+                if (DEBUG) console.error('getSourceActive -- Failed to send source active status:', e)
+            }
         }
+
+        return videoActive
     } catch (e) {
         if (DEBUG) console.error('getSourceActive -- Failed to get source active status:', e)
     }
@@ -128,6 +141,7 @@ async function getSourceFilterSettings(networks, sourceName, filterName, sendOSC
             if (DEBUG) console.error('getSourceFilterSettings -- Failed to send filter settings:', e)
         }
     }
+
     return defaultFilterSettings
 }
 
@@ -159,7 +173,7 @@ async function getSourceFilterDefaultSettings(networks, filterInfo, sendOSC = tr
     }
 }
 
-async function getSourceFilterSetting(networks, sourceName, filterName, settingPath) {
+async function getSourceFilterSetting(networks, sourceName, filterName, settingPath, sendOSC = true) {
     const filterSettingPath = `/source/${sourceName}/filters/${filterName}/settings/${settingPath.join('/')}`
 
     const filterSettings = await getSourceFilterSettings(networks, sourceName, filterName, false)
@@ -173,11 +187,20 @@ async function getSourceFilterSetting(networks, sourceName, filterName, settingP
         return
     }
 
-    try {
-        networks.oscOut.send(filterSettingPath, settingValue)
-    } catch (e) {
-        if (DEBUG) console.error(`getSourceFilterSetting -- Failed to send setting value of filter ${filterName}:`, e)
+    if (typeof (settingValue) === 'object') {
+        if (DEBUG) console.error(`getSourceFilterSetting -- Setting ${settingPath.join('/')} in filter ${filterName} have subsettings`)
+        return
     }
+
+    if (sendOSC) {
+        try {
+            networks.oscOut.send(filterSettingPath, settingValue)
+        } catch (e) {
+            if (DEBUG) console.error(`getSourceFilterSetting -- Failed to send setting value of filter ${filterName}:`, e)
+        }
+    }
+
+    return settingValue
 }
 
 async function setSourceFilterSetting(networks, sourceName, filterName, settingPath, settingValue) {
@@ -193,7 +216,7 @@ async function setSourceFilterSetting(networks, sourceName, filterName, settingP
 }
 
 async function getSourceFilter(networks, sourceName, filterName, sendOSC = true) {
-    const filterPath = `source/${sourceName}/filters/${filterName}`
+    const filterPath = `/source/${sourceName}/filters/${filterName}`
     try {
         const response = await networks.obs.call('GetSourceFilter', { sourceName, filterName })
         if (sendOSC) {
@@ -203,21 +226,27 @@ async function getSourceFilter(networks, sourceName, filterName, sendOSC = true)
                 if (DEBUG) console.error('getSourceFilter -- Failed to send filter settings:', e)
             }
         }
+
         return response
     } catch (e) {
         if (DEBUG) console.error('getSourceFilter -- Failed to get filter settings:', e)
     }
 }
 
-async function getSourceFilterEnabled(networks, sourceName, filterName) {
+async function getSourceFilterEnabled(networks, sourceName, filterName, sendOSC = true) {
     const filterEnablePath = `/source/${sourceName}/filters/${filterName}`
     const filter = await getSourceFilter(networks, sourceName, filterName, false)
     if (filter === undefined) return
-    try {
-        networks.oscOut.send(filterEnablePath, filter.filterEnabled ? 1 : 0)
-    } catch (e) {
-        if (DEBUG) console.error('getSourceFilterEnabled -- Failed to get source filter enable state', e)
+
+    if (sendOSC) {
+        try {
+            networks.oscOut.send(filterEnablePath, filter.filterEnabled ? 1 : 0)
+        } catch (e) {
+            if (DEBUG) console.error('getSourceFilterEnabled -- Failed to get source filter enable state', e)
+        }
     }
+
+    return filter.filterEnabled
 }
 
 async function setSourceFilterEnabled(networks, sourceName, filterName, state) {

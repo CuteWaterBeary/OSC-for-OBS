@@ -1,8 +1,13 @@
 const { parseSettingsPath, mergeSettings } = require('./utils')
 
-module.exports = { processInput, getInputList }
-
 const DEBUG = process.argv.includes('--enable-log')
+const TEST = process.argv.includes('--unit-test')
+
+if (TEST) {
+    module.exports = { processInput, getInputList, getInputKind, getInputSettings, setInputSettings, getInputSetting, setInputSetting, getInputDefaultSettings, getInputDefaultSetting, getInputPropertiesListPropertyItems, pressInputPropertiesButton }
+} else {
+    module.exports = { processInput, getInputList }
+}
 
 async function processInput(networks, path, args) {
     if (path[0] === undefined) {
@@ -83,7 +88,8 @@ async function getInputSettings(networks, inputName, sendOSC = true) {
                 if (DEBUG) console.error(`getInputSettings -- Failed to send settings of input ${inputName}:`, e)
             }
         }
-        return inputSettings
+
+        return defaultInputSettings
     } catch (e) {
         if (DEBUG) console.error(`getInputSettings -- Failed to get settings of input ${inputName}:`, e)
     }
@@ -120,14 +126,16 @@ async function getInputSetting(networks, inputName, settingPath) {
 
 async function setInputSetting(networks, inputName, settingPath, settingValue) {
     if (settingPath.length === 0 || settingValue === undefined) return
-    const inputSettings = {}
+    const inputSettings = await getInputSettings(networks, inputName, false)
     let temp = inputSettings
     for (const subPath of settingPath.slice(0, -1)) {
-        temp[subPath] = {}
+        if (temp[subPath] === undefined) {
+            temp[subPath] = {}
+        }
         temp = temp[subPath]
     }
     temp[settingPath.at(-1)] = settingValue
-    setInputSettings(networks, inputName, inputSettings)
+    setInputSettings(networks, inputName, temp)
 }
 
 async function getInputDefaultSettings(networks, inputName, sendOSC = true) {
@@ -158,7 +166,12 @@ async function getInputDefaultSetting(networks, inputName, settingPath) {
     })
 
     if (settingValue === undefined) {
-        if (DEBUG) console.error(`getInputDefaultSetting -- setting ${settingPath.join('/')} not found in input ${inputName}`)
+        if (DEBUG) console.error(`getInputDefaultSetting -- Setting ${settingPath.join('/')} not found in input ${inputName}`)
+        return
+    }
+
+    if (typeof (settingValue) === 'object') {
+        if (DEBUG) console.error(`getInputDefaultSetting -- Setting ${settingPath.join('/')} in input ${inputName} have subsettings`)
         return
     }
 
@@ -169,15 +182,19 @@ async function getInputDefaultSetting(networks, inputName, settingPath) {
     }
 }
 
-async function getInputPropertiesListPropertyItems(networks, inputName, propertyName) {
-    const inputPropertyItemsPath = `input/${inputName}/settings/${propertyName}/propertyItems`
+async function getInputPropertiesListPropertyItems(networks, inputName, propertyName, sendOSC = true) {
+    const inputPropertyItemsPath = `/input/${inputName}/settings/${propertyName}/propertyItems`
     try {
         const { propertyItems } = await networks.obs.call('GetInputPropertiesListPropertyItems', { inputName, propertyName })
-        try {
-            networks.oscOut.send(inputPropertyItemsPath, propertyItems.flatMap(propertyItem => propertyItem.itemValue))
-        } catch (e) {
-            if (DEBUG) console.error(`getInputPropertiesListPropertyItems -- Failed to send property items of property ${propertyName} of input ${inputName}:`, e)
+        if (sendOSC) {
+            try {
+                networks.oscOut.send(inputPropertyItemsPath, propertyItems.flatMap(propertyItem => propertyItem.itemValue))
+            } catch (e) {
+                if (DEBUG) console.error(`getInputPropertiesListPropertyItems -- Failed to send property items of property ${propertyName} of input ${inputName}:`, e)
+            }
         }
+
+        return propertyItems
     } catch (e) {
         if (DEBUG) console.error(`getInputPropertiesListPropertyItems -- Failed to get property items of property ${propertyName} of input ${inputName}:`, e)
     }

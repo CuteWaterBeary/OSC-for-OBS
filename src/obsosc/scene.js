@@ -1,6 +1,11 @@
-module.exports = { processScene, processActiveScene, getCurrentProgramScene, getSceneList, sendActiveSceneFeedback, sendSceneCompletedFeedback }
-
 const DEBUG = process.argv.includes('--enable-log')
+const TEST = process.argv.includes('--unit-test')
+
+if (TEST) {
+    module.exports = { processScene, processActiveScene, getSceneList, getCurrentProgramScene, setCurrentProgramScene, sendActiveSceneFeedback, sendSceneCompletedFeedback }
+} else {
+    module.exports = { processScene, processActiveScene, getCurrentProgramScene, getSceneList, sendActiveSceneFeedback, sendSceneCompletedFeedback }
+}
 
 async function processScene(networks, path, args) {
     if (path[0] === undefined) {
@@ -39,6 +44,9 @@ async function getSceneList(networks, sendOSC = true) {
     const sceneListPath = '/scene'
     try {
         const { scenes } = await networks.obs.call('GetSceneList')
+        // NOTE: It seems that OBSWebSocket (v5.0.0 at this point) list scenes from bottom to top
+        // TODO: Delete this line and use the sorting as is if that's preferable
+        scenes.sort((a, b) => b.sceneIndex - a.sceneIndex)
         if (sendOSC) {
             try {
                 networks.oscOut.send(sceneListPath, scenes.flatMap(scene => scene.sceneName))
@@ -79,7 +87,8 @@ async function setCurrentProgramScene(networks, sceneName) {
         }
 
         // NOTE: It seems that OBSWebSocket (v5.0.0 at this point) list scenes from bottom to top
-        sceneName = sceneList.at(-sceneName - 1).sceneName
+        // TODO: Use actual sceneIndex if that's preferable
+        sceneName = sceneList.at(sceneName).sceneName
     }
 
     try {
@@ -90,7 +99,7 @@ async function setCurrentProgramScene(networks, sceneName) {
 }
 
 async function sendActiveSceneFeedback(networks) {
-    getCurrentProgramScene(networks)
+    await getCurrentProgramScene(networks)
 }
 
 async function sendSceneCompletedFeedback(networks, sceneName) {
