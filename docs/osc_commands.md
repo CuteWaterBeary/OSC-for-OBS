@@ -210,6 +210,7 @@ Generally if a command could be sent with no argument would give you the status 
 | /sceneItem (feedback) | "scene item name 1" ... "scene item name n" | Scene item list feedback of active scene
 
 > Note: Might be deprecated later
+
 | Address | Arguments | Description
 |---|---|---|
 | /sceneItem | "scene name" | Get scene item list of specified scene
