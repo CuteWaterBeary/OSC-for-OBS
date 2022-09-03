@@ -1,6 +1,6 @@
 # Development
 
-This page shows how to run, build and test OSC for OBS
+This page shows you how to run, build and test OSC for OBS
 
 ## Basic Info
 

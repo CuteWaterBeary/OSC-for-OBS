@@ -68,7 +68,7 @@ async function processSourceFilter(networks, sourceName, path, args) {
         } else {
             setSourceFilterSetting(networks, sourceName, path[0], path.slice(2), args[0])
         }
-    } else if (path[1] === 'reset') {
+    } else if (path[1] === 'reset' && args[0] === 1) {
         setSourceFilterSettings(networks, sourceName, path[0], {}, false)
         setSourceFilterEnabled(networks, sourceName, path[0], 1)
     }

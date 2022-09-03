@@ -32,7 +32,7 @@ async function processStudioMode(networks, path, args) {
             }
         } else if (path[0] === 'transition') {
             transitionToProgram(networks, args)
-        } else if (path[0] === 'cursor') {
+        } else if (path[0] === 'cursor' && args[0] !== undefined) {
             setTBarPosition(networks, args[0])
         }
     }

@@ -10,14 +10,18 @@
   <img src="./icons/png/1024x1024.png" width=150 align="center">
 </p>
 
-Control and listen to [OBS](https://obsproject.com/) via OSC protocol
+Control and listen to [OBS Studio](https://obsproject.com/) via [OSC](https://en.wikipedia.org/wiki/Open_Sound_Control) protocol.
 
-# Requirement
+This is an Electron app that let you control OBS Studio via obs-websocket and your favorite OSC clients.
+
+## Requirement
 
 - [OBS Studio](https://obsproject.com) 27.0.0 or above
-- [obs-websocket](https://github.com/obsproject/obs-websocket) **5.0.0** or above
+- [obs-websocket](https://github.com/obsproject/obs-websocket) **5.0.0** or above  
+  OBS Studio 28.0 and above already have obs-websocket built-in, you don't need to download it separately
+- An OSC client
 
-# Scene and Source Naming
+## Scene and Source Naming
 
 To prevent unexpected behaviour, it's recommended to avoid the use of following names for your scenes/sources/filters/profiles/scene collections (case sensitive):
 
@@ -33,575 +37,63 @@ To prevent unexpected behaviour, it's recommended to avoid the use of following 
 
 While white space, symbols and non-ascii characters works fine so far in my testing, if you encountered any issue, please try renaming them to ascii characters and replace white space with underscore `_` or dash `-`
 
-# OSC Command List (WIP)
+## Basic Settings
 
-Format: `[command address(path)]` `argument 1` `argument 2` ... `argument n`
+![](docs/images/ui_network_settings.png)
 
-> If a command could be triggered by multiple addresses, only the first (top) one would received the feedback.
+- OBS WebSocket  
+  The IP, port and password of the obs-websocket to connect to
 
-> Example: Get active state of scene `Scene 1` by sending `/source` `Scene 1` would still getting feedback from `/source/Scene 1`
+- OSC IN  
+  The IP and port of OSC client to receive command messages from
 
-## Scene
+- OSC OUT  
+  The IP and port of OSC client to send feedback messages to
 
-`/scene`
+## OSC Commands
 
-Get scene list
+An OSC message is consist of address and arguments, by sending them, you can control various part of OBS Studio. For example:
 
-`/activeScene`
+| Address | Arguments | Description
+|---|---|---|
+| /scene | "Scene 2" | Set current scene to "Scene 2"
+| /recording | 1 | Start recording
+| /recording | 0 | Stop recording
+| /sceneItem/Browser/transform/cropTop | 100 | Set crop top to `100` for `Browser`
+| /transition/current | "Fade" | Set scene transition to `Fade` (not transition override)
+| /studio/transition | 1 | Start transition (when studio mode enabled)
+| /studio/transition | "Cut" | Start transition with transition named `Cut` (when studio mode enabled)
+| /studio/transition | "Fade" 500 | Start transition with transition named `Fade` and with duration `500` ms (when studio mode enabled)
 
-Get currently active scene
+> See [here](docs/osc_commands.md) for complete list
 
-`/activeScene` `[scene name]` or
+## OSC Feedbacks
 
-`/scene` `[scene name]` or
+When certain event triggered in OBS Studio, OSC for OBS would also send feedback if related toggle is enabled in settings.
 
-`/scene` `[scene index (0~n-1)]` or
+![OSC feedback toggles in OSC for OBS UI](docs/images/ui_osc_feedbacks.png)
 
-`/scene/[scene name]` `1` or
+For example, if `Notify active scene` is enabled, when you switch a scene in OBS Studio, the following OSC messages would be sent to OSC client
 
-`/scene/[scene index (0~n-1)]` `1`
+| Address | Arguments | Description
+|---|---|---|
+| /activeScene | "Scene 3" | Feedback the name of scene is switching to (at the start of transition)
+| /activeSceneCompleted | "Scene 3" | Feedback the name of scene is switched to (at the end of transition)
 
-Set currently active scene
+> See [here](docs/osc_feedbacks.md) for complete list
 
-## Source
+## Development
 
-`/source`
+You can run dev version of OSC for OBS by:
 
-Get source list (scenes + inputs)
-
-`/source/[source name]` or
-
-`/source` `[source name]` or
-
-`/source/[source name]/active`
-
-Get active state (shown on screen or not) of source
-
-`/source/[source name]/filters`
-
-Get filter list of the source
-
-`/source/[source name]/filters/[filter name]` or
-
-`/source/[source name]/filters/[filter name]/enable`
-
-Get enable state of the filter
-
-`/source/[source name]/filters/[filter name]` `[0|1]` or
-
-`/source/[source name]/filters/[filter name]/enable` `[0|1]`
-
-Set enable state of the filter
-
-`/source/[source name]/filters/[filter name]/disable`
-
-Disable the filter
-
-`/source/[source name]/filters/[filter name]/settings`
-
-Get list of path of available settings for the filter
-
-`/source/[source name]/filters/[filter name]/settings/[path of setting]`
-
-Get current value of the filter setting
-
-`/source/[source name]/filters/[filter name]/settings/[path of setting]` `[setting value]`
-
-Set current value of the filter setting
-
-`/source/[source name]/filters/[filter name]/reset`
-
-Reset filter settings and enable it
-
-## Scene Item
- 
-`/sceneItem`
-
-Get scene item list of current scene
-
-`/sceneItem` `[scene name]`
-
-Get scene item list of specific scene
-
-`/sceneItem/[path to scene item]/enable`
-
-Get enable state of the scene item
-
-`/sceneItem/[path to scene item]/enable` `[0|1]`
-
-Set enable state of the scene item
-
-`/sceneItem/[path to scene item]/disable` `1`
-
-Disable the scene item
-
-`/sceneItem/[path to scene item]/transform`
-
-Get transform/crop info (attributes) of a scene item
-
-- width, height (Read only)  
-  Current source size when bounding box type is set to `No bounds`
-
-- sourceWidth, sourceHeight (Read only)  
-  Source's original size
-
-- positionX, positionY
-
-- scaleX, scaleY
-
-- cropTop, cropRight, cropBottom, cropLeft
-
-- rotation (degree)
-
-- alignment  
-  Alignment for source or for bounding box when enabled, default: `5` (Top Left)
-  <table>
-    <tr>
-      <td>5 (Top Left)</td>
-      <td>4 (Top Center)</td>
-      <td>6 (Top Right)</td>
-    </tr>
-    <tr>
-      <td>1 (Center Left)</td>
-      <td>0 (Center)</td>
-      <td>2 (Center Right)</td>
-    </tr>
-    <tr>
-      <td>9 (Bottom Left)</td>
-      <td>8 (Bottom Center)</td>
-      <td>10 (Bottom Right)</td>
-    </tr>
-  </table>
-
-- boundsAlignment  
-  Alignment for source inside a bounding box, default: `0` (`Center`)
-
-- boundsWidth, boundsHeight
-
-- boundsType  
-  Bounding box type, default: `OBS_BOUNDS_NONE` (No bounds)
-  - `OBS_BOUNDS_NONE` (No bounds)
-  - `OBS_BOUNDS_STRETCH` (Stretch to bounds)
-  - `OBS_BOUNDS_SCALE_INNER` (Scale to inner bounds)
-  - `OBS_BOUNDS_SCALE_OUTER` (Scale to outer bounds)
-  - `OBS_BOUNDS_SCALE_TO_WIDTH` (Scale to width of bounds)
-  - `OBS_BOUNDS_SCALE_TO_HEIGHT` (Scale to height of bounds)
-  - `OBS_BOUNDS_MAX_ONLY` (Maximum size only)
-
-`/sceneItem/[path to scene item]/transform/[transform attribute]`
-
-`/sceneItem/[path to scene item]/transform/[transform attribute]` `[attribute value]`
-
-### Note - Resizing a source (scene item)
-
-By default, bounding box type of a source is set to `No bounds` . To properly resize a source, you can either stick to No bounds then change the scale of it, or switch to `Stretch to bounds` then change the bounding box size.
-
-#### Example
-
-With a OBS canvas (output) resolution of 1920x1080, a scene `Scene 1` and a image source `Image` contained a 4K image (3840x2160):
-
-If we want to fit `Image` entirely into `Scene 1` , we can either change the scale by
-
-```
-'/sceneItem/Scene 1/Image/transform/scaleX' 0.5
-'/sceneItem/Scene 1/Image/transform/scaleY' 0.5
+```shell
+npm install # First time only, install all required dependencies
+npm start
 ```
 
-Or switch bounding box type to `Stretch to bounds` then change the bounding box size, which you can precisely set
+> See [here](docs/development.md) for more information
 
-```
-'/sceneItem/Scene 1/Image/transform/boundsType' 'OBS_BOUNDS_STRETCH'
-
-'/sceneItem/Scene 1/Image/transform/boundsWidth' 1920
-'/sceneItem/Scene 1/Image/transform/boundsHeight' 1080
-```
-
-## Input
-
-`/input`
-
-Get input list
-
-`/input/[input name]/settings`
-
-Get list of path of available settings for the input
-
-`/input/[input name]/settings/[path of setting]`
-
-Get current value of the input setting
-
-`/input/[input name]/settings/[path of setting]` `[setting value]`
-
-Set current value of the input setting
-
-`/input/[input name]/default`
-
-Get list of path of default settings for the input
-
-`input/[input name]/default/[path of setting]`
-
-Get default value of the input setting
-
-
-## Audio
-
-`/audio`
-
-Get audio input list (including special inputs like PC audio and mic)
-
-`/audio` `[audio input name]`
-
-Get current volume of audio input in both mil and dB, output to `/audio/[audio input name]/volume` and `/audio/[audio input name]/volumeDb`
-
-`/audio/volume`
-
-Get current volume of audio input in *mil*
-
-`/audio/volume` `[audio volume]`
-
-Set current volume of audio input in *mil*
-
-`/audio/volumeDb`
-
-Get current volume of audio input in *dB*
-
-`/audio/volumeDb` `[audio volume]`
-
-Set current volume of audio input in *dB*
-
-`/audio/mute`
-
-Get mute state of audio input
-
-`/audio/mute` `[0|1]`
-
-Set mute state of audio input
-
-`/sceneAudio`
-
-Get audio input list of current scene (including special inputs like PC audio and mic)
-
-Note: Dynamically added inputs, like ones from source scene of a StreamFX's source mirror, is not included.
-
-## Transition
-
-`/transition`
-
-Get transition list
-
-`/transition/current`
-
-Get current transition name
-
-`/transition/current` `[scene name]`
-
-Set current transition name
-
-`/transition/duration`
-
-Get current transition duration
-
-`/transition/duration` `[duration (ms)]`
-
-Set current transition duration
-
-`/transition/cursor`
-
-Get current progression of transition (0.0~1.0)
-
-## Studio
-
-`/studio`
-
-Get enable state of studio mode
-
-`/studio` `[0|1]` or
-
-`/studio/enable` `[0|1]`
-
-Set enable state of studio mode
-
-`/studio/disable`
-
-Disable studio mode
-
-`/studio/toggle`
-
-Toggle studio mode
-
-`/studio/preview`
-
-Get studio preview scene
-
-`/studio/preview` `[scene name]`
-
-Set studio preview scene
-
-`/studio/transition` `1`
-
-Trigger studio mode transition
-
-`/studio/transition` `[transition name]`
-
-Trigger studio mode transition with specific transition
-
-`/studio/transition` `[transition name]` `[duration (ms)]`
-
-Trigger studio mode transition with specific transition and duration
-
-`/studio/cursor` `[cursor value (0.0~1.0)]`
-
-Set current progression of transition (0.0~1.0)
-
-Note: Unless it's set to 1.0, which will also trigger `/activeSceneCompleted`, you could enter any value within the range.
-
-## Recording
-
-`/recording`
-
-Get recording state, 0 for stopped, 1 for started
-
-`/recording` `[0|1]` or
-
-`/recording/start` `[0|1]`
-
-Set recording state, 0 for stop, 1 for start
-
-`/recording/stop` `1`
-
-Stop recording
-
-`/recording/pause` `[0|1]`
-
-Pause recording, 0 for resume, 1 for pause
-
-`/recording/resume` `1`
-
-Resume recording
-
-`/recording/toggle` `1`
-
-Toggle recording state between start and stop
-
-`/recording/togglePause` `1`
-
-Toggle recording state between pause and resume
-
-## Streaming
-
-`/streaming`
-
-Get streaming state, 0 for stopped, 1 for started
-
-`/streaming` `[0|1]` or
-
-`/streaming/start` `[0|1]`
-
-Set streaming state, 0 for stop, 1 for start
-
-`/streaming/stop` `1`
-
-Stop streaming
-
-`/streaming/toggle` `1`
-
-Toggle streaming state between start and stop
-
-## Virtual Cam
-
-`/virtualCam`
-
-Get virtual cam state, 0 for stopped, 1 for started
-
-`/virtualCam` `[0|1]` or
-
-`/virtualCam/start` `[0|1]`
-
-Set virtual cam state, 0 for stop, 1 for start
-
-`/virtualCam/stop` `1`
-
-Stop virtual cam
-
-`/virtualCam/toggle` `1`
-
-Toggle virtual cam state between start and stop
-
-## Output
-
-> Warning: Untested
-
-`/output`
-
-Get output list (might including virtual cam)
-
-`/output/[output name]` or
-
-`/output` `[output name]`
-
-Get output state, 0 for stopped, 1 for started
-
-`/output/[output name]` `[0|1]` or
-
-`/output/[output name]/start` `[0|1]`
-
-Set output state, 0 for stop, 1 for start
-
-`/output/[output name]/stop` `1`
-
-Stop output
-
-`/output/[output name]/toggle` `1`
-
-Toggle output state between start and stop
-
-## Profile
-
-`/profile`
-
-Get profile list
-
-`/profile/current`
-
-Get current profile name
-
-`/profile` `[profile name]` or
-
-`/profile/[profile name]` `1`
-
-Set current profile
-
-## Scene Collection
-
-`/sceneCollection`
-
-Get scene collection list
-
-`/sceneCollection/current`
-
-Get current scene collection name
-
-`/sceneCollection` `[scene collection name]` or
-
-`/sceneCollection/[scene collection name]` `1`
-
-Set current scene collection
-
-# OSC Feedbacks (WIP)
-
-In addition to some commands above, OSC for OBS could also send feedbacks when certain events is triggered in OBS if related option is enabled.
-
-## Scene
-
-`/activeScene` `[scene name]`
-
-Option: Notify active scene
-
-Triggered when OBS is start changing scene
-
-`/activeSceneCompleted` `[scene name]`
-
-Option: Notify active scene
-
-Triggered when a new scene is completely transitioned
-
-## Scene Item
-
-`/sceneItem` `[scene item 1]` ... `[scene item n]`
-
-Option: Notify active scene items
-
-Triggered when a new scene is completely transitioned
-
-## Audio
-
-`/sceneAudio` `[scene audio input 1]` ... `[scene audio input n]`
-
-Option: Notify active scene audios
-
-Triggered when a new scene is completely transitioned
-
-Note: Dynamically added inputs, like ones from source scene of a StreamFX's source mirror, is not included.
-
-`/audio/[audio input]/volume` `[volume (0.0~1.0)]`
-
-Option: Notify input volume change
-
-Triggered when a audio input's volume is changed in OBS
-
-`/audio/[audio input]/volumeDb` `[volume (-100.0~0.0)]`
-
-Option: Enable volumeDb feedback
-
-Triggered when a audio input's volume is changed in OBS
-
-`/audio/[audio input]/mute` `[0|1]`
-
-Option: Notify input mute state
-
-Triggered when a audio input is unmuted/muted in OBS
-
-## Recording
-
-`/recording` `[0|1]`
-
-Option: Notify recording state
-
-Triggered when recording is stopped/started
-
-`/recording/pause` `[0|1]`
-
-Option: Notify recording state
-
-Triggered when recording is resumed/paused
-
-## Streaming
-
-`/streaming` `[0|1]`
-
-Option: Notify streaming state
-
-Triggered when streaming is stopped/started
-
-## Virtual Cam
-
-`/virtualCam` `[0|1]`
-
-Option: Notify virtual cam state
-
-Triggered when virtual cam is stopped/started
-
-## Studio
-
-`/studio` `[0|1]`
-
-Option: Notify studio mode state
-
-Triggered when studio mode is disabled/enabled in OBS
-
-`/studio/preview` `[scene name]`
-
-Option: Notify studio preview scene
-
-Triggered when preview scene is changed in OBS
-
-## Profile
-
-`/profile/current`
-
-Option: Notify profile
-
-Triggered when current profile is changed
-
-## Scene Collection
-
-`/profile/current`
-
-Option: Notify scene collection
-
-Triggered when current scene collection is changed
-
-# Acknowledgement
+## Acknowledgement
 
 - [OSC for OBS by jshea2](github.com/jshea2/OSC-for-OBS) - Original project (upstream)
-- [ObSC](https://github.com/CarloCattano/ObSC) - Inspired by this project
+- [ObSC](https://github.com/CarloCattano/ObSC) - This project is inspired by
